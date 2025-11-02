@@ -27,3 +27,4 @@ Execute the following command in your terminal:
 
 ```bash
 curl https://pyenv.run | bash
+```
