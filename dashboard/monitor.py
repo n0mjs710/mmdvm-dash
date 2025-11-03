@@ -38,12 +38,14 @@ class LogMonitor:
             return
         
         self.running = True
-        logger.info(f"Starting monitor for {self.name}: {self.path}")
+        logger.debug(f"Starting monitor for {self.name}: {self.path}")
         
         # Parse recent log entries to establish current state (suppress broadcasts during scan)
         state.suppress_broadcasts = True
         await self.parse_recent_entries(lookback_lines=1000)
         state.suppress_broadcasts = False
+        
+        logger.info(f"Initialized {self.name} monitor - now watching for live events")
         
         # Now seek to end of file to only read new entries going forward
         try:
@@ -61,67 +63,163 @@ class LogMonitor:
                 await asyncio.sleep(5)  # Wait longer on error
     
     async def parse_recent_entries(self, lookback_lines: int = 1000):
-        """Parse recent log entries to establish current state on startup"""
+        """Parse recent log entries to establish current state on startup
+        
+        Scans backwards through logs looking for current state only.
+        Stops processing each type of information once found.
+        """
         try:
+            # Define what state we're looking for based on log type
+            state_to_find = self._get_state_targets()
+            
             # Try current log file first
-            if await self._parse_log_file(self.path, lookback_lines):
-                return  # Found what we need
+            found_count = await self._scan_for_state(self.path, lookback_lines, state_to_find)
             
-            # If not enough info, check previous days' logs (up to 5 days back)
-            base_name = self.path.stem  # e.g., "MMDVM" from "MMDVM.log"
-            parent_dir = self.path.parent
-            
-            from datetime import timedelta
-            today = datetime.now()
-            
-            for days_back in range(1, 6):  # Check 1-5 days back
-                date = today - timedelta(days=days_back)
-                date_str = date.strftime('%Y-%m-%d')
-                
-                # Common log rotation patterns
-                for pattern in [f"{base_name}-{date_str}.log", f"{base_name}.log.{days_back}"]:
-                    old_log = parent_dir / pattern
-                    if old_log.exists():
-                        logger.info(f"Checking previous log: {old_log}")
-                        await self._parse_log_file(old_log, lookback_lines=None)  # Parse entire old log
-                        break
+            logger.debug(f"Found {found_count} state items for {self.name}")
         
         except Exception as e:
             logger.error(f"Error parsing recent entries for {self.name}: {e}")
     
-    async def _parse_log_file(self, log_path: Path, lookback_lines: int = None) -> bool:
-        """Parse a log file. Returns True if we got useful data."""
+    def _get_state_targets(self) -> Dict[str, bool]:
+        """Get the state information we need to find for this log type"""
+        # Common state for all logs
+        targets = {
+            'current_mode': False,  # Current operating mode
+        }
+        
+        # Gateway-specific state
+        if 'DMRGateway' in self.name:
+            targets['dmr_mmdvm_connection'] = False
+            targets['dmr_network_connection'] = False
+        elif 'P25Gateway' in self.name:
+            targets['p25_mmdvm_connection'] = False
+            targets['p25_reflector'] = False
+        elif 'YSFGateway' in self.name:
+            targets['ysf_mmdvm_connection'] = False
+            targets['ysf_reflector'] = False
+        
+        return targets
+    
+    async def _scan_for_state(self, log_path: Path, lookback_lines: int, state_to_find: Dict[str, bool]) -> int:
+        """Scan backwards through log file, stopping when we've found all state we need
+        
+        Returns number of state items found.
+        """
         try:
             async with aiofiles.open(log_path, 'r', encoding='utf-8', errors='ignore') as f:
                 all_lines = await f.readlines()
                 
                 if not all_lines:
-                    return False
+                    return 0
                 
-                # Take last N lines, or all lines if lookback_lines is None
+                # Take last N lines
                 if lookback_lines:
                     lines = all_lines[-lookback_lines:] if len(all_lines) > lookback_lines else all_lines
-                    logger.info(f"Parsing {len(lines)} recent log entries from {log_path.name}")
                 else:
                     lines = all_lines
-                    logger.info(f"Parsing entire log file {log_path.name} ({len(lines)} lines)")
                 
-                # Parse lines
+                # Scan BACKWARDS from most recent
+                lines.reverse()
+                
+                found_count = 0
+                processed = 0
+                
                 for line in lines:
                     line = line.strip()
                     if not line:
                         continue
                     
+                    # Stop if we've found everything we need
+                    if all(state_to_find.values()):
+                        logger.debug(f"Found all state for {self.name} after scanning {processed} lines")
+                        break
+                    
+                    processed += 1
+                    
                     if self.parser:
                         entry = self.parser.parse_line(line)
                         if entry:
-                            await self.process_entry(entry)
+                            # Check if this entry gives us state we need
+                            if await self._process_state_entry(entry, state_to_find):
+                                found_count += 1
                 
-                return len(lines) > 0
+                return found_count
         
         except Exception as e:
-            logger.error(f"Error parsing log file {log_path}: {e}")
+            logger.error(f"Error scanning log file {log_path}: {e}")
+            return 0
+    
+    async def _process_state_entry(self, entry, state_to_find: Dict[str, bool]) -> bool:
+        """Process an entry during state scanning. Returns True if this entry provided useful state."""
+        if not entry.data:
             return False
+        
+        event_type = entry.data.get('event')
+        found_something = False
+        
+        # Mode changes - always want most recent
+        if event_type == 'mode_change' and not state_to_find.get('current_mode'):
+            mode = entry.data.get('mode', 'IDLE')
+            state.update_mode(mode)
+            state_to_find['current_mode'] = True
+            found_something = True
+        
+        # Gateway connections
+        elif event_type == 'dmr_mmdvm_connected' and not state_to_find.get('dmr_mmdvm_connection'):
+            state.update_network_status('DMR-MMDVM', True)
+            state_to_find['dmr_mmdvm_connection'] = True
+            found_something = True
+        
+        elif event_type == 'dmr_network_connected' and not state_to_find.get('dmr_network_connection'):
+            network = entry.data.get('network', 'Unknown')
+            state.update_network_status(f'DMR-{network}', True)
+            state_to_find['dmr_network_connection'] = True
+            found_something = True
+        
+        elif event_type == 'dmr_network_disconnected' and not state_to_find.get('dmr_network_connection'):
+            network = entry.data.get('network', 'Unknown')
+            state.update_network_status(f'DMR-{network}', False)
+            state_to_find['dmr_network_connection'] = True  # Found state (disconnected)
+            found_something = True
+        
+        elif event_type == 'p25_mmdvm_connected' and not state_to_find.get('p25_mmdvm_connection'):
+            state.update_network_status('P25-MMDVM', True)
+            state_to_find['p25_mmdvm_connection'] = True
+            found_something = True
+        
+        elif event_type == 'p25_mmdvm_disconnected' and not state_to_find.get('p25_mmdvm_connection'):
+            state.update_network_status('P25-MMDVM', False)
+            state_to_find['p25_mmdvm_connection'] = True  # Found state (disconnected)
+            found_something = True
+        
+        elif event_type == 'p25_reflector_linked' and not state_to_find.get('p25_reflector'):
+            reflector = entry.data.get('reflector', 'Unknown')
+            state.update_network_status('P25', True, target=reflector)
+            state_to_find['p25_reflector'] = True
+            found_something = True
+        
+        elif event_type == 'p25_network_closing' and not state_to_find.get('p25_reflector'):
+            state.update_network_status('P25', False)
+            state_to_find['p25_reflector'] = True  # Found state (disconnected)
+            found_something = True
+        
+        elif event_type == 'ysf_mmdvm_connected' and not state_to_find.get('ysf_mmdvm_connection'):
+            state.update_network_status('YSF-MMDVM', True)
+            state_to_find['ysf_mmdvm_connection'] = True
+            found_something = True
+        
+        elif event_type in ['ysf_linked', 'ysf_reconnected'] and not state_to_find.get('ysf_reflector'):
+            reflector = entry.data.get('reflector', 'Unknown')
+            state.update_network_status('YSF', True, reflector)
+            state_to_find['ysf_reflector'] = True
+            found_something = True
+        
+        elif event_type == 'ysf_disconnect_requested' and not state_to_find.get('ysf_reflector'):
+            state.update_network_status('YSF', False)
+            state_to_find['ysf_reflector'] = True  # Found state (disconnected)
+            found_something = True
+        
+        return found_something
     
     async def check_for_updates(self):
         """Check for new log entries"""
@@ -169,6 +267,9 @@ class LogMonitor:
         
         event_type = entry.data.get('event')
         
+        # Use DEBUG for historical logs, INFO for live events
+        log_fn = logger.debug if state.suppress_broadcasts else logger.info
+        
         if event_type == 'mode_change':
             mode = entry.data.get('mode', 'IDLE')
             state.update_mode(mode)
@@ -187,63 +288,63 @@ class LogMonitor:
             # YSF linked to a reflector
             reflector = entry.data.get('reflector', 'Unknown')
             state.update_network_status('YSF', True, reflector)
-            logger.info(f"YSF linked to reflector: {reflector}")
+            log_fn(f"YSF linked to reflector: {reflector}")
         
         elif event_type == 'ysf_reconnected':
             # YSF reconnected to reflector
             reflector = entry.data.get('reflector', 'Unknown')
             state.update_network_status('YSF', True, reflector)
-            logger.info(f"YSF reconnected to reflector: {reflector}")
+            log_fn(f"YSF reconnected to reflector: {reflector}")
         
         elif event_type == 'ysf_mmdvm_connected':
             # YSFGateway successfully connected to MMDVMHost (no disconnect is logged)
             state.update_network_status('YSF-MMDVM', True)
-            logger.info("YSF Gateway connected to MMDVM")
+            log_fn("YSF Gateway connected to MMDVM")
         
         elif event_type == 'ysf_disconnect_requested':
             # YSF disconnecting from reflector
             state.update_network_status('YSF', False)
-            logger.info("YSF disconnect requested")
+            log_fn("YSF disconnect requested")
         
         # P25 Gateway events
         elif event_type == 'p25_mmdvm_connected':
             # P25Gateway opened Rpt network connection to MMDVMHost
             state.update_network_status('P25-MMDVM', True)
-            logger.info("P25 Gateway connected to MMDVM")
+            log_fn("P25 Gateway connected to MMDVM")
         
         elif event_type == 'p25_mmdvm_disconnected':
             # P25Gateway closed Rpt network connection
             state.update_network_status('P25-MMDVM', False)
-            logger.info("P25 Gateway disconnected from MMDVM")
+            log_fn("P25 Gateway disconnected from MMDVM")
         
         elif event_type == 'p25_reflector_linked':
             # P25Gateway statically linked to a reflector
             reflector = entry.data.get('reflector', 'Unknown')
             state.update_network_status('P25', True, target=reflector)
-            logger.info(f"P25 Gateway linked to reflector: {reflector} (from log parsing)")
+            log_fn(f"P25 Gateway linked to reflector: {reflector} (from log parsing)")
         
         elif event_type == 'p25_network_closing':
             # P25 network closing (reflector disconnecting)
             state.update_network_status('P25', False)
-            logger.info("P25 network closing")
+            log_fn("P25 network closing")
         
         # DMR Gateway events
         elif event_type == 'dmr_mmdvm_connected':
             # DMRGateway connected to MMDVMHost (no disconnect is logged)
             state.update_network_status('DMR-MMDVM', True)
-            logger.info("DMR Gateway connected to MMDVM")
+            log_fn("DMR Gateway connected to MMDVM")
         
         elif event_type == 'dmr_network_connected':
             # DMR network (e.g., HBlink4) logged in
             network = entry.data.get('network', 'Unknown')
             state.update_network_status(f'DMR-{network}', True)
-            logger.info(f"DMR network connected: {network}")
+            log_fn(f"DMR network connected: {network}")
         
         elif event_type == 'dmr_network_disconnected':
             # DMR network closing
             network = entry.data.get('network', 'Unknown')
             state.update_network_status(f'DMR-{network}', False)
-            logger.info(f"DMR network disconnected: {network}")
+            log_fn(f"DMR network disconnected: {network}")
         
         elif event_type in ['dmr_rx', 'dstar_rx', 'ysf_rx', 'p25_rx', 'nxdn_rx', 'fm_rx']:
             # Create transmission record

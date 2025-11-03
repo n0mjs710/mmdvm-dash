@@ -98,7 +98,12 @@ class DashboardState:
             data={'old_mode': old_mode, 'new_mode': mode}
         )
         self.add_event(event)
-        logger.info(f"Mode changed: {old_mode} -> {mode}")
+        
+        # Use DEBUG logging during initial scan, INFO for live events
+        if self.suppress_broadcasts:
+            logger.debug(f"Mode changed: {old_mode} -> {mode}")
+        else:
+            logger.info(f"Mode changed: {old_mode} -> {mode}")
         
         # Immediate broadcast for mode changes (critical for responsive UI)
         asyncio.create_task(self.broadcast_status_update())
@@ -133,7 +138,12 @@ class DashboardState:
             data={'network': network, 'connected': connected, 'target': target}
         )
         self.add_event(event)
-        logger.info(message)
+        
+        # Use DEBUG logging during initial scan, INFO for live events
+        if self.suppress_broadcasts:
+            logger.debug(message)
+        else:
+            logger.info(message)
     
     def add_transmission(self, transmission: Transmission):
         """Add or update a transmission"""
