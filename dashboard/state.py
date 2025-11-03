@@ -24,6 +24,7 @@ class SystemStatus:
     mmdvm_running: bool = False
     enabled_modes: List[str] = field(default_factory=list)
     gateways: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    info: Dict[str, Any] = field(default_factory=dict)  # Repeater info (callsign, location, etc)
     
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -157,6 +158,7 @@ class DashboardState:
         """Update expected state from config reader"""
         self.status.mmdvm_running = expected_state.get('mmdvm_running', False)
         self.status.enabled_modes = expected_state.get('enabled_modes', [])
+        self.status.info = expected_state.get('info', {})  # Store repeater info
         
         # Store enabled networks from MMDVM config
         enabled_networks = expected_state.get('enabled_networks', [])

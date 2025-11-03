@@ -19,13 +19,48 @@
         
         header { 
             margin-bottom: 20px; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center;
             background: #1e293b;
-            padding: 20px;
+            padding: 20px 24px;
             border-radius: 12px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .repeater-callsign {
+            font-size: 36px;
+            font-weight: 700;
+            color: #38bdf8;
+            letter-spacing: 2px;
+        }
+        
+        .header-info {
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+            color: #94a3b8;
+            font-size: 14px;
+        }
+        
+        .info-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .info-label {
+            color: #64748b;
+            font-weight: 500;
+        }
+        
+        .info-value {
+            color: #e2e8f0;
+            font-weight: 600;
         }
         
         h1 { color: #38bdf8; font-size: 32px; }
@@ -283,13 +318,26 @@
 <body>
     <div class="container">
         <header>
-            <div>
-                <h1 id="dashboardTitle">MMDVM Dashboard</h1>
-                <div class="subtitle" id="dashboardDescription">Multi-Mode Digital Voice Modem System Monitor</div>
+            <div class="header-top">
+                <div class="repeater-callsign" id="repeaterCallsign">MMDVM</div>
+                <div class="status-badges">
+                    <div class="mode-badge" id="currentMode">IDLE</div>
+                    <div class="connection-status warning" id="wsStatus">Connecting...</div>
+                </div>
             </div>
-            <div class="status-badges">
-                <div class="mode-badge" id="currentMode">IDLE</div>
-                <div class="connection-status warning" id="wsStatus">Connecting...</div>
+            <div class="header-info">
+                <div class="info-item">
+                    <span class="info-label">Frequency:</span>
+                    <span class="info-value" id="repeaterFrequency">---</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Location:</span>
+                    <span class="info-value" id="repeaterLocation">---</span>
+                </div>
+                <div class="info-item" id="repeaterDescriptionContainer" style="display: none;">
+                    <span class="info-label">Description:</span>
+                    <span class="info-value" id="repeaterDescription">---</span>
+                </div>
             </div>
         </header>
 
@@ -546,11 +594,46 @@
         }
 
         function updateUI() {
+            // Update repeater info in header
+            updateRepeaterInfo();
+            
             // Update system status cards
             updateSystemStatus();
             
             // Update mode
             document.getElementById('currentMode').textContent = state.status.current_mode || 'IDLE';
+        }
+        
+        function updateRepeaterInfo() {
+            const info = state.status.info || {};
+            
+            // Callsign
+            if (info.callsign) {
+                document.getElementById('repeaterCallsign').textContent = info.callsign;
+            }
+            
+            // Frequency (show TX or RX if available)
+            let frequency = '---';
+            if (info.tx_frequency) {
+                frequency = `${info.tx_frequency} MHz`;
+                if (info.rx_frequency && info.rx_frequency !== info.tx_frequency) {
+                    frequency += ` / ${info.rx_frequency} MHz`;
+                }
+            } else if (info.rx_frequency) {
+                frequency = `${info.rx_frequency} MHz`;
+            }
+            document.getElementById('repeaterFrequency').textContent = frequency;
+            
+            // Location
+            if (info.location) {
+                document.getElementById('repeaterLocation').textContent = info.location;
+            }
+            
+            // Description (optional)
+            if (info.description) {
+                document.getElementById('repeaterDescription').textContent = info.description;
+                document.getElementById('repeaterDescriptionContainer').style.display = 'flex';
+            }
         }
 
         function updateWebSocketStatus(connected) {
