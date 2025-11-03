@@ -158,6 +158,11 @@ class DashboardState:
         self.status.mmdvm_running = expected_state.get('mmdvm_running', False)
         self.status.enabled_modes = expected_state.get('enabled_modes', [])
         
+        # Store enabled networks from MMDVM config
+        enabled_networks = expected_state.get('enabled_networks', [])
+        for network in enabled_networks:
+            self.status.networks[network] = True  # Mark as configured
+        
         # Update gateway status
         gateways = expected_state.get('gateways', {})
         self.status.gateways = {}
@@ -170,7 +175,7 @@ class DashboardState:
             }
         
         self.status.last_update = datetime.now().timestamp()
-        logger.info(f"Updated expected state: MMDVMHost={self.status.mmdvm_running}, Gateways={list(self.status.gateways.keys())}")
+        logger.info(f"Updated expected state: MMDVMHost={self.status.mmdvm_running}, Networks={enabled_networks}, Gateways={list(self.status.gateways.keys())}")
     
     def get_recent_calls(self, limit: int = 10) -> List[Dict[str, Any]]:
         """Get recent calls"""
@@ -192,6 +197,7 @@ class DashboardState:
         """Get current system status"""
         return {
             **self.status.to_dict(),
+            'enabled_networks': list(self.status.networks.keys()),  # List of network names
             'active_transmissions': len(self.active_transmissions),
             'total_calls_today': self.stats['total_calls_today'],
             'calls_by_mode': self.stats['calls_by_mode'],
