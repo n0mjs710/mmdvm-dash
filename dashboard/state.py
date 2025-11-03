@@ -233,6 +233,7 @@ class DashboardState:
         
         logger.debug(f"Broadcasting status update to {len(self.websocket_clients)} clients")
         logger.debug(f"Gateway status being sent: dmr={status_data.get('gateways', {}).get('dmr', {})}, ysf={status_data.get('gateways', {}).get('ysf', {})}, p25={status_data.get('gateways', {}).get('p25', {})}")
+        logger.debug(f"Network status being sent: {status_data.get('networks', {})}")
         
         # Send to all clients, removing disconnected ones
         disconnected = []
