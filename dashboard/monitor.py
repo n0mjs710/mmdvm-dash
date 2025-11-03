@@ -61,17 +61,51 @@ class LogMonitor:
     async def parse_recent_entries(self, lookback_lines: int = 1000):
         """Parse recent log entries to establish current state on startup"""
         try:
-            async with aiofiles.open(self.path, 'r', encoding='utf-8', errors='ignore') as f:
-                # Read all lines
+            # Try current log file first
+            if await self._parse_log_file(self.path, lookback_lines):
+                return  # Found what we need
+            
+            # If not enough info, check previous days' logs (up to 5 days back)
+            base_name = self.path.stem  # e.g., "MMDVM" from "MMDVM.log"
+            parent_dir = self.path.parent
+            
+            from datetime import timedelta
+            today = datetime.now()
+            
+            for days_back in range(1, 6):  # Check 1-5 days back
+                date = today - timedelta(days=days_back)
+                date_str = date.strftime('%Y-%m-%d')
+                
+                # Common log rotation patterns
+                for pattern in [f"{base_name}-{date_str}.log", f"{base_name}.log.{days_back}"]:
+                    old_log = parent_dir / pattern
+                    if old_log.exists():
+                        logger.info(f"Checking previous log: {old_log}")
+                        await self._parse_log_file(old_log, lookback_lines=None)  # Parse entire old log
+                        break
+        
+        except Exception as e:
+            logger.error(f"Error parsing recent entries for {self.name}: {e}")
+    
+    async def _parse_log_file(self, log_path: Path, lookback_lines: int = None) -> bool:
+        """Parse a log file. Returns True if we got useful data."""
+        try:
+            async with aiofiles.open(log_path, 'r', encoding='utf-8', errors='ignore') as f:
                 all_lines = await f.readlines()
                 
-                # Take last N lines
-                recent_lines = all_lines[-lookback_lines:] if len(all_lines) > lookback_lines else all_lines
+                if not all_lines:
+                    return False
                 
-                logger.info(f"Parsing {len(recent_lines)} recent log entries from {self.name}")
+                # Take last N lines, or all lines if lookback_lines is None
+                if lookback_lines:
+                    lines = all_lines[-lookback_lines:] if len(all_lines) > lookback_lines else all_lines
+                    logger.info(f"Parsing {len(lines)} recent log entries from {log_path.name}")
+                else:
+                    lines = all_lines
+                    logger.info(f"Parsing entire log file {log_path.name} ({len(lines)} lines)")
                 
                 # Parse lines
-                for line in recent_lines:
+                for line in lines:
                     line = line.strip()
                     if not line:
                         continue
@@ -80,9 +114,12 @@ class LogMonitor:
                         entry = self.parser.parse_line(line)
                         if entry:
                             await self.process_entry(entry)
+                
+                return len(lines) > 0
         
         except Exception as e:
-            logger.error(f"Error parsing recent entries for {self.name}: {e}")
+            logger.error(f"Error parsing log file {log_path}: {e}")
+            return False
     
     async def check_for_updates(self):
         """Check for new log entries"""
