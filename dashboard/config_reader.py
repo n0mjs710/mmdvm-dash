@@ -158,7 +158,7 @@ class MMDVMConfig:
             return {}
         
         return {
-            'callsign': self.config.get('Info', 'Callsign', fallback=''),
+            'callsign': self.config.get('Info', 'Callsign', fallback='').strip('"').strip("'"),
             'id': self.config.get('Info', 'Id', fallback=''),
             'rx_frequency': self.config.get('Info', 'RXFrequency', fallback=''),
             'tx_frequency': self.config.get('Info', 'TXFrequency', fallback=''),
@@ -166,8 +166,8 @@ class MMDVMConfig:
             'latitude': self.config.get('Info', 'Latitude', fallback=''),
             'longitude': self.config.get('Info', 'Longitude', fallback=''),
             'height': self.config.get('Info', 'Height', fallback=''),
-            'location': self.config.get('Info', 'Location', fallback=''),
-            'description': self.config.get('Info', 'Description', fallback=''),
+            'location': self.config.get('Info', 'Location', fallback='').strip('"').strip("'"),
+            'description': self.config.get('Info', 'Description', fallback='').strip('"').strip("'"),
             'url': self.config.get('Info', 'URL', fallback='')
         }
 
