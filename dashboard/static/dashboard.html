@@ -625,15 +625,18 @@
                 // Networks column - show connection status with colors
                 html += '<div class="protocol-section">';
                 html += '<div class="protocol-label">Networks</div>';
+                console.log('Network status check:', status.networks, 'Active transmissions:', Array.from(state.activeTransmissions));
                 html += allModes.map(net => {
                     let pillClass = 'disabled';
                     if (enabledNetworks.includes(net)) {
                         // Check if this network has an active transmission
                         if (state.activeTransmissions.has(net)) {
                             pillClass = 'active';  // Green - transmitting
+                            console.log(`${net}: active (transmitting)`);
                         } else {
                             // Check if network is connected (will be a string like "Kansas" or "3120", or true)
                             const networkStatus = status.networks?.[net];
+                            console.log(`${net} network status:`, networkStatus);
                             if (networkStatus && networkStatus !== false) {
                                 pillClass = 'selected';  // Blue - connected but idle
                             } else {

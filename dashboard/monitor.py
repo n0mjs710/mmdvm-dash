@@ -173,12 +173,14 @@ class LogMonitor:
         elif event_type == 'dmr_network_connected' and not state_to_find.get('dmr_network_connection'):
             network = entry.data.get('network', 'Unknown')
             state.update_network_status(f'DMR-{network}', True)
+            state.update_network_status('DMR', True)  # Also set top-level DMR for frontend
             state_to_find['dmr_network_connection'] = True
             found_something = True
         
         elif event_type == 'dmr_network_disconnected' and not state_to_find.get('dmr_network_connection'):
             network = entry.data.get('network', 'Unknown')
             state.update_network_status(f'DMR-{network}', False)
+            state.update_network_status('DMR', False)  # Also clear top-level DMR
             state_to_find['dmr_network_connection'] = True  # Found state (disconnected)
             found_something = True
         
@@ -338,12 +340,14 @@ class LogMonitor:
             # DMR network (e.g., HBlink4) logged in
             network = entry.data.get('network', 'Unknown')
             state.update_network_status(f'DMR-{network}', True)
+            state.update_network_status('DMR', True)  # Also set top-level DMR for frontend
             log_fn(f"DMR network connected: {network}")
         
         elif event_type == 'dmr_network_disconnected':
             # DMR network closing
             network = entry.data.get('network', 'Unknown')
             state.update_network_status(f'DMR-{network}', False)
+            state.update_network_status('DMR', False)  # Also clear top-level DMR
             log_fn(f"DMR network disconnected: {network}")
         
         elif event_type in ['dmr_rx', 'dstar_rx', 'ysf_rx', 'p25_rx', 'nxdn_rx', 'fm_rx']:
