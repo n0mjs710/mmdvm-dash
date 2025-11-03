@@ -181,6 +181,12 @@
             padding-left: 0;
         }
         
+        .status-card-networks .protocol-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4px;
+        }
+        
         .card { 
             background: #1e293b; 
             border-radius: 8px; 
@@ -408,18 +414,22 @@
                 if (modes.length > 0) {
                     html += '<div class="protocol-section">';
                     html += '<div class="protocol-label">RF Modes</div>';
+                    html += '<div class="protocol-grid">';
                     html += modes.map(mode => 
                         `<div class="network-item"><span class="network-dot"></span>${mode}</div>`
                     ).join('');
+                    html += '</div>';
                     html += '</div>';
                 }
                 
                 if (networks.length > 0) {
                     html += '<div class="protocol-section">';
                     html += '<div class="protocol-label">Networks</div>';
+                    html += '<div class="protocol-grid">';
                     html += networks.map(net => 
                         `<div class="network-item"><span class="network-dot"></span>${net}</div>`
                     ).join('');
+                    html += '</div>';
                     html += '</div>';
                 }
                 
