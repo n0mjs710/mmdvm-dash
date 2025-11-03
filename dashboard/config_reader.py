@@ -154,10 +154,17 @@ class MMDVMConfig:
     
     def get_info(self) -> Dict:
         """Get station info"""
-        if not self.config.has_section('Info'):
-            return {}
+        info = {}
         
-        return {
+        # Get DMR ID from [General] section
+        if self.config.has_section('General'):
+            info['dmr_id'] = self.config.get('General', 'Id', fallback='')
+        
+        # Get rest from [Info] section
+        if not self.config.has_section('Info'):
+            return info
+        
+        info.update({
             'callsign': self.config.get('Info', 'Callsign', fallback='').strip('"').strip("'"),
             'id': self.config.get('Info', 'Id', fallback=''),
             'rx_frequency': self.config.get('Info', 'RXFrequency', fallback=''),
@@ -169,7 +176,9 @@ class MMDVMConfig:
             'location': self.config.get('Info', 'Location', fallback='').strip('"').strip("'"),
             'description': self.config.get('Info', 'Description', fallback='').strip('"').strip("'"),
             'url': self.config.get('Info', 'URL', fallback='')
-        }
+        })
+        
+        return info
 
 
 class GatewayConfig:

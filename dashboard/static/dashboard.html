@@ -345,6 +345,10 @@
                 </div>
             </div>
             <div class="header-info">
+                <div class="info-item" id="dmrIdContainer" style="display: none;">
+                    <span class="info-label">DMR ID:</span>
+                    <span class="info-value" id="dmrId">---</span>
+                </div>
                 <div class="info-item">
                     <span class="info-label">Frequency:</span>
                     <span class="info-value" id="repeaterFrequency">---</span>
@@ -513,9 +517,8 @@
                 const enabledNetworks = status.enabled_networks || [];
                 const currentMode = status.current_mode || 'IDLE';
                 
-                // All possible modes
+                // All possible modes in consistent order
                 const allModes = ['DMR', 'D-Star', 'YSF', 'P25', 'NXDN', 'POCSAG', 'FM'];
-                const allNetworks = ['DMR', 'YSF', 'P25', 'NXDN', 'D-Star', 'POCSAG', 'FM'];
                 
                 let html = '<div class="protocol-grid">';
                 
@@ -540,7 +543,7 @@
                 // Networks column
                 html += '<div class="protocol-section">';
                 html += '<div class="protocol-label">Networks</div>';
-                html += allNetworks.map(net => {
+                html += allModes.map(net => {
                     let pillClass = enabledNetworks.includes(net) ? 'inactive' : 'disabled';
                     return `<span class="mode-pill ${pillClass}">${net}</span>`;
                 }).join('');
@@ -626,6 +629,12 @@
             // Callsign
             if (info.callsign) {
                 document.getElementById('repeaterCallsign').textContent = info.callsign;
+            }
+            
+            // DMR ID from [General] section
+            if (info.dmr_id) {
+                document.getElementById('dmrId').textContent = info.dmr_id;
+                document.getElementById('dmrIdContainer').style.display = 'flex';
             }
             
             // Helper function to format frequency from Hz to MHz
