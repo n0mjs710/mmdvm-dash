@@ -241,11 +241,8 @@ class GatewayConfig:
         """Load gateway config"""
         try:
             self.config.read(self.config_path)
-            # Only parse if process is running
-            if self.is_running:
-                self._parse_settings()
-            else:
-                logger.debug(f"{self.process_name} config exists but process not running")
+            # Parse settings to determine enabled status
+            self._parse_settings()
         except Exception as e:
             logger.error(f"Error loading {self.config_path}: {e}")
     
