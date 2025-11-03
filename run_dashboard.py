@@ -30,7 +30,7 @@ async def start_monitors():
     nxdn_gateway_ini = config_paths.get('nxdn_gateway_ini')
     
     # Initialize config manager to read INI files
-    logger.info("Reading configuration from INI files...")
+    logger.debug("Reading configuration from INI files...")
     config_mgr = initialize_config_manager(
         mmdvm_ini=mmdvm_ini,
         dmr_gateway_ini=dmr_gateway_ini,
@@ -43,7 +43,7 @@ async def start_monitors():
     expected_state = config_mgr.get_expected_state()
     from dashboard.state import state
     state.update_expected_state(expected_state)
-    logger.info(f"System state updated: MMDVMHost running={expected_state.get('mmdvm_running')}")
+    logger.debug(f"System state updated: MMDVMHost running={expected_state.get('mmdvm_running')}")
     
     # Get all log paths from INI files
     log_paths = config_mgr.get_all_log_paths()
@@ -77,7 +77,7 @@ async def start_monitors():
                 }
                 parser_type = parser_map.get(source_name, source_name.lower())
                 
-                logger.info(f"Monitoring {latest_log} as {source_name} (parser: {parser_type})")
+                logger.debug(f"Monitoring {latest_log} as {source_name} (parser: {parser_type})")
                 monitor_manager.add_monitor(source_name, latest_log, parser_type)
             else:
                 logger.warning(f"No log files found matching {log_pattern}")
@@ -86,7 +86,7 @@ async def start_monitors():
     
     # Start all monitors
     await monitor_manager.start_all()
-    logger.info(f"Started {len(monitor_manager.monitors)} log monitors")
+    logger.debug(f"Started {len(monitor_manager.monitors)} log monitors")
     
     # Return config_mgr for use in background task
     return config_mgr
@@ -115,8 +115,8 @@ async def update_process_status(config_mgr):
 if __name__ == "__main__":
     import uvicorn
     
-    logger.info("Starting MMDVM Dashboard...")
-    logger.info(f"Config paths: {config.get('config_paths')}")
+    logger.debug("Starting MMDVM Dashboard...")
+    logger.debug(f"Config paths: {config.get('config_paths')}")
     
     # Create uvicorn config
     uvicorn_config = uvicorn.Config(

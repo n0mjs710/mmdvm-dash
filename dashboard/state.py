@@ -147,6 +147,9 @@ class DashboardState:
             logger.debug(message)
         else:
             logger.info(message)
+        
+        # Immediate broadcast for network changes (critical for responsive UI)
+        asyncio.create_task(self.broadcast_status_update())
     
     def add_transmission(self, transmission: Transmission):
         """Add or update a transmission"""
