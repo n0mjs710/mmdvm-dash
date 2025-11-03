@@ -566,8 +566,6 @@
                     }
                 });
                 
-                console.log('Updated state.status:', state.status);
-                console.log('Active transmissions:', Array.from(state.activeTransmissions));
                 updateUI();
             }
         }
@@ -575,15 +573,6 @@
         function updateSystemStatus() {
             const status = state.status || {};
             const gateways = status.gateways || {};
-            
-            console.log('=== UPDATE SYSTEM STATUS ===');
-            console.log('updateSystemStatus called with:', {
-                mmdvm_running: status.mmdvm_running,
-                enabled_modes: status.enabled_modes,
-                enabled_networks: status.enabled_networks,
-                networks: status.networks,
-                gateways: gateways
-            });
             
             // Update MMDVMHost - show RF modes and Network modes
             const mmdvmRunning = status.mmdvm_running || false;

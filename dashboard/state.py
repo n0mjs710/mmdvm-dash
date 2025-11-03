@@ -238,7 +238,7 @@ class DashboardState:
             }
         
         self.status.last_update = datetime.now().timestamp()
-        logger.info(f"Updated expected state: MMDVMHost={self.status.mmdvm_running}, Networks={enabled_networks}, Gateways={list(self.status.gateways.keys())}")
+        logger.debug(f"Updated expected state: MMDVMHost={self.status.mmdvm_running}, Networks={enabled_networks}, Gateways={list(self.status.gateways.keys())}")
         
         # Immediate broadcast for process status changes (critical updates)
         asyncio.create_task(self.broadcast_status_update())
