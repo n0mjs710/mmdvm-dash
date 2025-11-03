@@ -413,13 +413,77 @@ class YSFGatewayParser:
 
 
 # Parser factory
+class P25GatewayParser:
+    """Parser for P25Gateway log files"""
+    
+    TIMESTAMP_PATTERN = r'([MDISEWF]):\s+(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\.\d{3})\s+(.*)'
+    
+    # Key P25 events to track
+    OPENING_RPT_PATTERN = r'Opening Rpt network connection'  # MMDVM connection opening
+    CLOSING_RPT_PATTERN = r'Closing Rpt network connection'  # MMDVM connection closing
+    LINKED_REFLECTOR_PATTERN = r'Statically linked to reflector (\d+)'  # Connected to reflector
+    OPENING_P25_PATTERN = r'Opening P25 network connection'  # P25 network opening
+    CLOSING_P25_PATTERN = r'Closing P25 network connection'  # P25 network closing
+    
+    def parse_line(self, line: str) -> Optional[LogEntry]:
+        """Parse a single P25Gateway log line"""
+        match = re.match(self.TIMESTAMP_PATTERN, line)
+        if not match:
+            return None
+        
+        level_char, timestamp_str, message = match.groups()
+        level_map = {'M': 'INFO', 'D': 'DEBUG', 'I': 'INFO', 'E': 'ERROR', 'W': 'WARNING'}
+        level = level_map.get(level_char, 'INFO')
+        
+        try:
+            timestamp = datetime.strptime(timestamp_str, '%Y-%m-%d %H:%M:%S.%f')
+        except ValueError:
+            timestamp = datetime.now()
+        
+        entry = LogEntry(timestamp, level, message, 'p25gateway')
+        
+        # Check for MMDVM (Rpt network) connection opening
+        if re.search(self.OPENING_RPT_PATTERN, message):
+            entry.data = {
+                'event': 'p25_mmdvm_connected'
+            }
+        
+        # Check for MMDVM (Rpt network) connection closing
+        elif re.search(self.CLOSING_RPT_PATTERN, message):
+            entry.data = {
+                'event': 'p25_mmdvm_disconnected'
+            }
+        
+        # Check for P25 network (reflector) connection
+        elif match := re.search(self.LINKED_REFLECTOR_PATTERN, message):
+            reflector = match.group(1)
+            entry.data = {
+                'event': 'p25_reflector_linked',
+                'reflector': reflector
+            }
+        
+        # Check for P25 network opening
+        elif re.search(self.OPENING_P25_PATTERN, message):
+            entry.data = {
+                'event': 'p25_network_opening'
+            }
+        
+        # Check for P25 network closing
+        elif re.search(self.CLOSING_P25_PATTERN, message):
+            entry.data = {
+                'event': 'p25_network_closing'
+            }
+        
+        return entry
+
+
 def get_parser(source: str):
-    """Get appropriate parser for log source"""
+    """Get appropriate parser for a log source"""
     parsers = {
-        'mmdvmhost': MMDVMHostParser,
+        'mmdvm': MMDVMParser,
         'dmrgateway': DMRGatewayParser,
         'ysfgateway': YSFGatewayParser,
-        'p25gateway': YSFGatewayParser,  # Reuse YSF parser for now (similar format)
+        'p25gateway': P25GatewayParser,
         'nxdngateway': YSFGatewayParser,  # Reuse YSF parser for now (similar format)
     }
     parser_class = parsers.get(source.lower())

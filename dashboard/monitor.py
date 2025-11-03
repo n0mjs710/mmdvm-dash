@@ -194,7 +194,8 @@ class LogMonitor:
             logger.info(f"YSF reconnected to reflector: {reflector}")
         
         elif event_type == 'ysf_mmdvm_connected':
-            # YSFGateway successfully connected to MMDVMHost
+            # YSFGateway successfully connected to MMDVMHost (no disconnect is logged)
+            state.update_network_status('YSF-MMDVM', True)
             logger.info("YSF Gateway connected to MMDVM")
         
         elif event_type == 'ysf_disconnect_requested':
@@ -202,9 +203,32 @@ class LogMonitor:
             state.update_network_status('YSF', False)
             logger.info("YSF disconnect requested")
         
+        # P25 Gateway events
+        elif event_type == 'p25_mmdvm_connected':
+            # P25Gateway opened Rpt network connection to MMDVMHost
+            state.update_network_status('P25-MMDVM', True)
+            logger.info("P25 Gateway connected to MMDVM")
+        
+        elif event_type == 'p25_mmdvm_disconnected':
+            # P25Gateway closed Rpt network connection
+            state.update_network_status('P25-MMDVM', False)
+            logger.info("P25 Gateway disconnected from MMDVM")
+        
+        elif event_type == 'p25_reflector_linked':
+            # P25Gateway statically linked to a reflector
+            reflector = entry.data.get('reflector', 'Unknown')
+            state.update_network_status('P25', True, target=reflector)
+            logger.info(f"P25 Gateway linked to reflector: {reflector}")
+        
+        elif event_type == 'p25_network_closing':
+            # P25 network closing (reflector disconnecting)
+            state.update_network_status('P25', False)
+            logger.info("P25 network closing")
+        
         # DMR Gateway events
         elif event_type == 'dmr_mmdvm_connected':
             # DMRGateway connected to MMDVMHost (no disconnect is logged)
+            state.update_network_status('DMR-MMDVM', True)
             logger.info("DMR Gateway connected to MMDVM")
         
         elif event_type == 'dmr_network_connected':
