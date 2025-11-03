@@ -710,12 +710,12 @@
                 indicator.className = 'status-indicator stopped';
             }
             
-            // Build all pills: features + connections
+            // Build all pills: core features first, then auxiliary features
             let pillsHtml = '';
             
-            // Feature pills (YSF, FCS, APRS, GPSD)
-            const allFeatures = ['YSF', 'FCS', 'APRS', 'GPSD'];
-            pillsHtml += allFeatures.map(feature => {
+            // Core network features (YSF, FCS)
+            const coreFeatures = ['YSF', 'FCS'];
+            pillsHtml += coreFeatures.map(feature => {
                 const isEnabled = networks.hasOwnProperty(feature);
                 const pillClass = isEnabled ? 'enabled' : 'disabled';
                 return `<span class="feature-pill ${pillClass}">${feature}</span>`;
@@ -735,6 +735,14 @@
             const mmdvmConnected = isRunning && enabled;
             const mmdvmClass = mmdvmConnected ? 'enabled' : 'disabled';
             pillsHtml += `<span class="feature-pill ${mmdvmClass}">MMDVM</span>`;
+            
+            // Auxiliary features last (APRS, GPSD)
+            const auxFeatures = ['APRS', 'GPSD'];
+            pillsHtml += auxFeatures.map(feature => {
+                const isEnabled = networks.hasOwnProperty(feature);
+                const pillClass = isEnabled ? 'enabled' : 'disabled';
+                return `<span class="feature-pill ${pillClass}">${feature}</span>`;
+            }).join('');
             
             featurePills.innerHTML = pillsHtml;
             
