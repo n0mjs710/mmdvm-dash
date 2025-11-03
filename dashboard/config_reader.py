@@ -62,7 +62,8 @@ class MMDVMConfig:
             'System Fusion Network': 'YSF',
             'P25 Network': 'P25',
             'NXDN Network': 'NXDN',
-            'POCSAG Network': 'POCSAG'
+            'POCSAG Network': 'POCSAG',
+            'FM Network': 'FM'
         }
         
         for section, network in network_sections.items():
@@ -165,6 +166,15 @@ class DMRGatewayConfig(GatewayConfig):
     
     def _parse_settings(self):
         """Parse DMR Gateway specific settings"""
+        # Check if DMRGateway is enabled at all
+        if self.config.has_section('General'):
+            # Some configs use 'Enabled', others might use 'Enable'
+            enabled = (self.config.getboolean('General', 'Enabled', fallback=False) or
+                      self.config.getboolean('General', 'Enable', fallback=False))
+            if not enabled:
+                logger.debug("DMRGateway: General section exists but not enabled")
+                return
+        
         # DMRGateway can connect to multiple networks
         network_sections = [
             'DMR Network 1',
@@ -176,11 +186,16 @@ class DMRGatewayConfig(GatewayConfig):
         
         for section in network_sections:
             if self.config.has_section(section):
-                enabled = self.config.getboolean(section, 'Enabled', fallback=False)
+                # Check both 'Enabled' and 'Enable'
+                enabled = (self.config.getboolean(section, 'Enabled', fallback=False) or
+                          self.config.getboolean(section, 'Enable', fallback=False))
                 if enabled:
                     name = self.config.get(section, 'Name', fallback=section)
+                    logger.info(f"DMRGateway: Found enabled network '{name}'")
                     self.networks[name] = True
                     self.enabled = True
+                else:
+                    logger.debug(f"DMRGateway: {section} exists but not enabled")
 
 
 class YSFGatewayConfig(GatewayConfig):
@@ -189,11 +204,21 @@ class YSFGatewayConfig(GatewayConfig):
     def _parse_settings(self):
         """Parse YSF Gateway specific settings"""
         if self.config.has_section('Network'):
-            self.enabled = self.config.getboolean('Network', 'Enable', fallback=False)
+            # Check both 'Enable' and 'Enabled'
+            self.enabled = (self.config.getboolean('Network', 'Enable', fallback=False) or
+                           self.config.getboolean('Network', 'Enabled', fallback=False))
             if self.enabled:
                 startup = self.config.get('Network', 'Startup', fallback='')
                 if startup:
+                    logger.info(f"YSFGateway: Enabled with startup '{startup}'")
                     self.networks['Startup'] = startup
+                else:
+                    logger.info("YSFGateway: Enabled")
+                    self.networks['YSFNetwork'] = True
+            else:
+                logger.debug("YSFGateway: Network section exists but not enabled")
+        else:
+            logger.debug("YSFGateway: No Network section found")
 
 
 class P25GatewayConfig(GatewayConfig):
@@ -202,10 +227,16 @@ class P25GatewayConfig(GatewayConfig):
     def _parse_settings(self):
         """Parse P25 Gateway specific settings"""
         if self.config.has_section('Network'):
-            self.enabled = self.config.getboolean('Network', 'Enable', fallback=False)
+            # Check both 'Enable' and 'Enabled'
+            self.enabled = (self.config.getboolean('Network', 'Enable', fallback=False) or
+                           self.config.getboolean('Network', 'Enabled', fallback=False))
             if self.enabled:
-                host = self.config.get('Network', 'HostsFile', fallback='')
+                logger.info("P25Gateway: Enabled")
                 self.networks['P25Network'] = True
+            else:
+                logger.debug("P25Gateway: Network section exists but not enabled")
+        else:
+            logger.debug("P25Gateway: No Network section found")
 
 
 class NXDNGatewayConfig(GatewayConfig):
