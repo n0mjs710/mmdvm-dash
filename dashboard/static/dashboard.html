@@ -576,10 +576,12 @@
             const status = state.status || {};
             const gateways = status.gateways || {};
             
+            console.log('=== UPDATE SYSTEM STATUS ===');
             console.log('updateSystemStatus called with:', {
                 mmdvm_running: status.mmdvm_running,
                 enabled_modes: status.enabled_modes,
                 enabled_networks: status.enabled_networks,
+                networks: status.networks,
                 gateways: gateways
             });
             
