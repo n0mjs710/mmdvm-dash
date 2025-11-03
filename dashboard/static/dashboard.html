@@ -624,26 +624,19 @@
                 }).join('');
                 html += '</div>';
                 
-                // Networks column - show connection status with colors
+                // Networks column - mirrors RF mode state (no gateway connection info)
                 html += '<div class="protocol-section">';
                 html += '<div class="protocol-label">Networks</div>';
-                console.log('Network status check:', status.networks, 'Active transmissions:', Array.from(state.activeTransmissions));
                 html += allModes.map(net => {
                     let pillClass = 'disabled';
                     if (enabledNetworks.includes(net)) {
-                        // Check if this network has an active transmission
+                        // Match RF mode state exactly - MMDVMHost doesn't know about gateway connections
                         if (state.activeTransmissions.has(net)) {
                             pillClass = 'active';  // Green - transmitting
-                            console.log(`${net}: active (transmitting)`);
+                        } else if (net === currentMode) {
+                            pillClass = 'selected';  // Blue - mode locked
                         } else {
-                            // Check if network is connected (will be a string like "Kansas" or "3120", or true)
-                            const networkStatus = status.networks?.[net];
-                            console.log(`${net} network status:`, networkStatus);
-                            if (networkStatus && networkStatus !== false) {
-                                pillClass = 'selected';  // Blue - connected but idle
-                            } else {
-                                pillClass = 'inactive';  // Gray - enabled but not connected
-                            }
+                            pillClass = 'inactive';  // Gray - enabled but not locked
                         }
                     }
                     return `<span class="mode-pill ${pillClass}">${net}</span>`;
