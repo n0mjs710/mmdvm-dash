@@ -98,9 +98,14 @@ class DashboardState:
         Args:
             network: Network name (e.g., 'YSF', 'DMR', 'P25')
             connected: Whether the network is connected
-            target: Optional target/reflector name (e.g., 'Kansas' for YSF reflector)
+            target: Optional target/reflector name (e.g., 'Kansas' for YSF reflector, '3120' for P25)
         """
-        self.status.networks[network] = connected
+        # Store the target (reflector name/number) if connected, otherwise False
+        if connected and target:
+            self.status.networks[network] = target
+        else:
+            self.status.networks[network] = connected
+        
         self.status.last_update = datetime.now().timestamp()
         
         # Build message with target if provided

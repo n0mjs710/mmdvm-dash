@@ -421,7 +421,7 @@ class P25GatewayParser:
     # Key P25 events to track
     OPENING_RPT_PATTERN = r'Opening Rpt network connection'  # MMDVM connection opening
     CLOSING_RPT_PATTERN = r'Closing Rpt network connection'  # MMDVM connection closing
-    LINKED_REFLECTOR_PATTERN = r'Statically linked to reflector (\d+)'  # Connected to reflector
+    LINKED_REFLECTOR_PATTERN = r'linked to reflector (\d+)'  # Connected to reflector (static or dynamic)
     OPENING_P25_PATTERN = r'Opening P25 network connection'  # P25 network opening
     CLOSING_P25_PATTERN = r'Closing P25 network connection'  # P25 network closing
     
