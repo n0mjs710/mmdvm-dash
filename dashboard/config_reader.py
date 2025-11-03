@@ -15,7 +15,7 @@ class MMDVMConfig:
     
     def __init__(self, config_path: str = "/etc/MMDVM.ini"):
         self.config_path = Path(config_path)
-        self.config = configparser.ConfigParser()
+        self.config = configparser.ConfigParser(strict=False)  # Allow duplicate keys
         self.enabled_modes: Set[str] = set()
         self.enabled_networks: Set[str] = set()
         self.log_settings = {}
@@ -133,7 +133,7 @@ class GatewayConfig:
     
     def __init__(self, config_path: str):
         self.config_path = Path(config_path)
-        self.config = configparser.ConfigParser()
+        self.config = configparser.ConfigParser(strict=False)  # Allow duplicate keys
         self.enabled = False
         self.networks: Dict[str, bool] = {}
         

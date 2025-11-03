@@ -129,6 +129,15 @@ async def dashboard():
         return HTMLResponse(f.read())
 
 
+@app.get("/favicon.ico")
+async def favicon():
+    """Serve favicon"""
+    favicon_path = Path(__file__).parent / 'static' / 'favicon.svg'
+    if favicon_path.exists():
+        return FileResponse(favicon_path, media_type="image/svg+xml")
+    return HTMLResponse(status_code=404)
+
+
 # Mount static files
 static_path = Path(__file__).parent / 'static'
 if static_path.exists():
