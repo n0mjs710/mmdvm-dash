@@ -218,9 +218,26 @@ class DashboardState:
     
     def update_expected_state(self, expected_state: Dict[str, Any]):
         """Update expected state from config reader"""
-        self.status.mmdvm_running = expected_state.get('mmdvm_running', False)
-        self.status.enabled_modes = expected_state.get('enabled_modes', [])
-        self.status.info = expected_state.get('info', {})  # Store repeater info
+        # Track if anything changed
+        changed = False
+        
+        # Check for changes in MMDVM running state
+        new_mmdvm_running = expected_state.get('mmdvm_running', False)
+        if self.status.mmdvm_running != new_mmdvm_running:
+            self.status.mmdvm_running = new_mmdvm_running
+            changed = True
+        
+        # Check for changes in enabled modes
+        new_enabled_modes = expected_state.get('enabled_modes', [])
+        if self.status.enabled_modes != new_enabled_modes:
+            self.status.enabled_modes = new_enabled_modes
+            changed = True
+        
+        # Check for changes in repeater info
+        new_info = expected_state.get('info', {})
+        if self.status.info != new_info:
+            self.status.info = new_info
+            changed = True
         
         # Store enabled networks from MMDVM config
         enabled_networks = expected_state.get('enabled_networks', [])
@@ -228,23 +245,32 @@ class DashboardState:
             # Only set to True if not already set to a specific target (reflector/TG)
             if network not in self.status.networks or self.status.networks[network] is False:
                 self.status.networks[network] = True  # Mark as configured
+                changed = True
         
         # Update gateway status
         gateways = expected_state.get('gateways', {})
-        self.status.gateways = {}
+        new_gateways = {}
         
         for gw_name, gw_data in gateways.items():
-            self.status.gateways[gw_name] = {
+            new_gateways[gw_name] = {
                 'is_running': gw_data.get('is_running', False),
                 'enabled': gw_data.get('enabled', False),
                 'networks': gw_data.get('networks', {})
             }
         
-        self.status.last_update = datetime.now().timestamp()
-        logger.debug(f"Updated expected state: MMDVMHost={self.status.mmdvm_running}, Networks={enabled_networks}, Gateways={list(self.status.gateways.keys())}")
+        # Check if gateways changed
+        if self.status.gateways != new_gateways:
+            self.status.gateways = new_gateways
+            changed = True
         
-        # Immediate broadcast for process status changes (critical updates)
-        asyncio.create_task(self.broadcast_status_update())
+        # Only update timestamp and broadcast if something changed
+        if changed:
+            self.status.last_update = datetime.now().timestamp()
+            logger.debug(f"State changed - MMDVMHost={self.status.mmdvm_running}, Networks={enabled_networks}, Gateways={list(self.status.gateways.keys())}")
+            # Immediate broadcast for process status changes (critical updates)
+            asyncio.create_task(self.broadcast_status_update())
+        else:
+            logger.debug("Expected state check: no changes detected")
     
     async def broadcast_status_update(self):
         """Broadcast status update to all connected WebSocket clients"""
