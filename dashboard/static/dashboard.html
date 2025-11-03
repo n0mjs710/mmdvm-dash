@@ -622,11 +622,25 @@
                 }).join('');
                 html += '</div>';
                 
-                // Networks column
+                // Networks column - show connection status with colors
                 html += '<div class="protocol-section">';
                 html += '<div class="protocol-label">Networks</div>';
                 html += allModes.map(net => {
-                    let pillClass = enabledNetworks.includes(net) ? 'inactive' : 'disabled';
+                    let pillClass = 'disabled';
+                    if (enabledNetworks.includes(net)) {
+                        // Check if this network has an active transmission
+                        if (state.activeTransmissions.has(net)) {
+                            pillClass = 'active';  // Green - transmitting
+                        } else {
+                            // Check if network is connected (will be a string like "Kansas" or "3120", or true)
+                            const networkStatus = status.networks?.[net];
+                            if (networkStatus && networkStatus !== false) {
+                                pillClass = 'selected';  // Blue - connected but idle
+                            } else {
+                                pillClass = 'inactive';  // Gray - enabled but not connected
+                            }
+                        }
+                    }
                     return `<span class="mode-pill ${pillClass}">${net}</span>`;
                 }).join('');
                 html += '</div>';
