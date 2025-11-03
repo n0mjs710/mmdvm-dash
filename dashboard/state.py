@@ -150,6 +150,21 @@ class DashboardState:
             del self.active_transmissions[key]
             logger.info(f"Transmission ended: {tx.source} -> {tx.destination} ({duration:.1f}s)")
     
+    def end_transmission_by_mode(self, mode: str):
+        """End all active transmissions for a specific mode"""
+        keys_to_remove = [key for key, tx in self.active_transmissions.items() if tx.mode == mode]
+        for key in keys_to_remove:
+            self.end_transmission(key)
+        if keys_to_remove:
+            logger.info(f"Ended {len(keys_to_remove)} transmission(s) for {mode}")
+    
+    def clear_all_transmissions(self):
+        """Clear all active transmissions (e.g., when mode changes to IDLE)"""
+        count = len(self.active_transmissions)
+        if count > 0:
+            self.active_transmissions.clear()
+            logger.info(f"Cleared {count} active transmission(s) due to mode change")
+    
     def add_event(self, event: Event):
         """Add event to history"""
         self.events.append(event)

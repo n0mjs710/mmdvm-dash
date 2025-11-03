@@ -39,18 +39,35 @@ class MMDVMHostParser:
     # Mode patterns
     MODE_SET_PATTERN = r'Mode set to (.+)'
     
-    # Transmission patterns
-    DMR_RX_PATTERN = r'DMR Slot (\d), received (?:voice|data) (?:header|transmission) from (\d+) to (?:TG\s*)?(\d+)'
-    DMR_TX_PATTERN = r'DMR Slot (\d), transmission from (\d+) to (?:TG\s*)?(\d+)'
-    DMR_LATE_ENTRY_PATTERN = r'DMR Slot (\d), late entry from (\d+) to (?:TG\s*)?(\d+)'
+    # Transmission patterns - based on actual MMDVMHost log format
+    # DMR: Matches "DMR Slot X, received network/RF voice header from CALLSIGN to TG XXXX"
+    DMR_RX_PATTERN = r'DMR Slot (\d), received (network|RF) voice header from ([A-Z0-9]+) to TG\s*(\d+)'
+    DMR_END_PATTERN = r'DMR Slot (\d), received (network|RF) end of voice transmission from ([A-Z0-9]+) to TG\s*(\d+)'
     
+    # D-Star: Keep existing patterns (not in provided logs but should work)
     DSTAR_RX_PATTERN = r'D-Star, received (?:header|data) from ([A-Z0-9]+)\s+/([A-Z0-9]+)\s+to\s+([A-Z0-9]+)'
+    DSTAR_END_PATTERN = r'D-Star, end of transmission'
     
-    YSF_RX_PATTERN = r'YSF, received (?:header|data) from ([A-Z0-9]+) to ([A-Z0-9]+)'
+    # YSF: Matches "YSF, received RF header from CALLSIGN to DG-ID X"
+    # Also matches "YSF, received RF end of transmission from CALLSIGN to DG-ID X"
+    YSF_RX_PATTERN = r'YSF, received (network|RF) header from ([A-Z0-9\s]+)\s+to DG-ID\s+(\d+)'
+    YSF_END_PATTERN = r'YSF, received (network|RF) end of transmission from ([A-Z0-9\s]+)\s+to DG-ID\s+(\d+)'
     
-    P25_RX_PATTERN = r'P25, received (?:voice|data) (?:header|transmission) from (\d+) to (?:TG\s*)?(\d+)'
+    # P25: Has separate header and voice transmission messages
+    # Matches "P25, received RF voice transmission from CALLSIGN to TG XXXX"
+    P25_RX_PATTERN = r'P25, received (network|RF) (?:voice transmission|header) from ([A-Z0-9]+) to TG\s*(\d+)'
+    P25_HEADER_PATTERN = r'P25, received (network|RF) header'
+    P25_END_PATTERN = r'P25, received (network|RF) end of voice transmission from ([A-Z0-9]+) to TG\s*(\d+)'
     
-    NXDN_RX_PATTERN = r'NXDN, received (?:voice|data) (?:header|transmission) from (\d+) to (?:TG\s*)?(\d+)'
+    # NXDN: Keep existing patterns (not in provided logs but should work)
+    NXDN_RX_PATTERN = r'NXDN, received (network|RF) (?:voice|data) (?:header|transmission) from ([A-Z0-9]+) to (?:TG\s*)?(\d+)'
+    NXDN_END_PATTERN = r'NXDN, received (network|RF) end of transmission from ([A-Z0-9]+) to (?:TG\s*)?(\d+)'
+    
+    # Note: POCSAG is transmit-only (paging), no receive events to track
+    
+    # Note: FM does not have specific start/end messages like other modes
+    # FM activity detection relies on mode changes and will be cleared when mode changes to IDLE
+    FM_RX_PATTERN = r'FM, received (?:header|transmission)'
     
     # Network patterns
     NETWORK_CONNECTED_PATTERN = r'(.+) Network, connected'
@@ -113,26 +130,19 @@ class MMDVMHostParser:
             entry.data = {
                 'event': 'dmr_rx',
                 'slot': int(match.group(1)),
-                'source': match.group(2),
-                'destination': match.group(3),
+                'source_type': match.group(2),  # 'network' or 'RF'
+                'source': match.group(3),
+                'destination': match.group(4),
                 'mode': 'DMR'
             }
         
-        elif match := re.search(self.DMR_TX_PATTERN, message):
+        elif match := re.search(self.DMR_END_PATTERN, message):
             entry.data = {
-                'event': 'dmr_tx',
+                'event': 'dmr_end',
                 'slot': int(match.group(1)),
-                'source': match.group(2),
-                'destination': match.group(3),
-                'mode': 'DMR'
-            }
-        
-        elif match := re.search(self.DMR_LATE_ENTRY_PATTERN, message):
-            entry.data = {
-                'event': 'dmr_late_entry',
-                'slot': int(match.group(1)),
-                'source': match.group(2),
-                'destination': match.group(3),
+                'source_type': match.group(2),  # 'network' or 'RF'
+                'source': match.group(3),
+                'destination': match.group(4),
                 'mode': 'DMR'
             }
         
@@ -146,21 +156,58 @@ class MMDVMHostParser:
                 'mode': 'D-Star'
             }
         
+        elif match := re.search(self.DSTAR_END_PATTERN, message):
+            entry.data = {
+                'event': 'dstar_end',
+                'mode': 'D-Star'
+            }
+        
         # YSF transmissions
         elif match := re.search(self.YSF_RX_PATTERN, message):
             entry.data = {
                 'event': 'ysf_rx',
-                'source': match.group(1),
-                'destination': match.group(2),
+                'source_type': match.group(1),  # 'network' or 'RF'
+                'source': match.group(2).strip(),
+                'destination': match.group(3),
+                'mode': 'YSF'
+            }
+        
+        elif match := re.search(self.YSF_END_PATTERN, message):
+            entry.data = {
+                'event': 'ysf_end',
+                'source_type': match.group(1),  # 'network' or 'RF'
+                'source': match.group(2).strip(),
+                'destination': match.group(3),
                 'mode': 'YSF'
             }
         
         # P25 transmissions
+        # Note: P25 has separate "header" and "voice transmission" messages
         elif match := re.search(self.P25_RX_PATTERN, message):
             entry.data = {
                 'event': 'p25_rx',
-                'source': match.group(1),
-                'destination': match.group(2),
+                'source_type': match.group(1),  # 'network' or 'RF'
+                'source': match.group(2),
+                'destination': match.group(3),
+                'mode': 'P25'
+            }
+        
+        elif match := re.search(self.P25_HEADER_PATTERN, message):
+            # P25 header without callsign info - just note that P25 activity started
+            entry.data = {
+                'event': 'p25_rx',
+                'source_type': match.group(1),  # 'network' or 'RF'
+                'source': 'Unknown',
+                'destination': 'Unknown',
+                'mode': 'P25'
+            }
+        
+        elif match := re.search(self.P25_END_PATTERN, message):
+            entry.data = {
+                'event': 'p25_end',
+                'source_type': match.group(1),  # 'network' or 'RF'
+                'source': match.group(2),
+                'destination': match.group(3),
                 'mode': 'P25'
             }
         
@@ -168,9 +215,28 @@ class MMDVMHostParser:
         elif match := re.search(self.NXDN_RX_PATTERN, message):
             entry.data = {
                 'event': 'nxdn_rx',
-                'source': match.group(1),
-                'destination': match.group(2),
+                'source_type': match.group(1),  # 'network' or 'RF'
+                'source': match.group(2),
+                'destination': match.group(3),
                 'mode': 'NXDN'
+            }
+        
+        elif match := re.search(self.NXDN_END_PATTERN, message):
+            entry.data = {
+                'event': 'nxdn_end',
+                'source_type': match.group(1),  # 'network' or 'RF'
+                'source': match.group(2),
+                'destination': match.group(3),
+                'mode': 'NXDN'
+            }
+        
+        # FM transmissions
+        # Note: FM doesn't have specific end-of-transmission messages
+        # Active FM transmissions are cleared when mode changes to IDLE
+        elif match := re.search(self.FM_RX_PATTERN, message):
+            entry.data = {
+                'event': 'fm_rx',
+                'mode': 'FM'
             }
         
         # Network status

@@ -102,7 +102,11 @@ class LogMonitor:
         event_type = entry.data.get('event')
         
         if event_type == 'mode_change':
-            state.update_mode(entry.data['mode'])
+            mode = entry.data.get('mode', 'IDLE')
+            state.update_mode(mode)
+            # If mode changes to IDLE, clear all active transmissions
+            if mode == 'IDLE':
+                state.clear_all_transmissions()
         
         elif event_type == 'network_connected':
             state.update_network_status(entry.data['network'], True)
@@ -110,7 +114,7 @@ class LogMonitor:
         elif event_type == 'network_disconnected':
             state.update_network_status(entry.data['network'], False)
         
-        elif event_type in ['dmr_rx', 'dstar_rx', 'ysf_rx', 'p25_rx', 'nxdn_rx']:
+        elif event_type in ['dmr_rx', 'dstar_rx', 'ysf_rx', 'p25_rx', 'nxdn_rx', 'fm_rx']:
             # Create transmission record
             transmission = Transmission(
                 timestamp=entry.timestamp.timestamp(),
@@ -122,6 +126,13 @@ class LogMonitor:
                 active=True
             )
             state.add_transmission(transmission)
+        
+        elif event_type in ['dmr_end', 'dstar_end', 'ysf_end', 'p25_end', 'nxdn_end']:
+            # End transmission for this mode
+            # Note: FM doesn't have specific end messages, cleared on mode change to IDLE
+            mode = entry.data.get('mode')
+            if mode:
+                state.end_transmission_by_mode(mode)
         
         elif event_type == 'modem_info':
             state.status.modem_connected = True
