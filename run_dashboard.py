@@ -87,6 +87,26 @@ async def start_monitors():
     # Start all monitors
     await monitor_manager.start_all()
     logger.info(f"Started {len(monitor_manager.monitors)} log monitors")
+    
+    # Return config_mgr for use in background task
+    return config_mgr
+
+
+async def update_process_status(config_mgr):
+    """Periodically check if processes are still running"""
+    from dashboard.state import state
+    
+    while True:
+        try:
+            await asyncio.sleep(5)  # Check every 5 seconds
+            
+            # Get fresh process status
+            expected_state = config_mgr.get_expected_state()
+            state.update_expected_state(expected_state)
+            
+        except Exception as e:
+            logger.error(f"Error updating process status: {e}")
+            await asyncio.sleep(5)
 
 
 if __name__ == "__main__":
@@ -106,8 +126,11 @@ if __name__ == "__main__":
     
     # Run with startup tasks
     async def main():
-        # Start log monitors
-        await start_monitors()
+        # Start log monitors and get config manager
+        config_mgr = await start_monitors()
+        
+        # Start background task to update process status
+        asyncio.create_task(update_process_status(config_mgr))
         
         # Run server
         await server.serve()
