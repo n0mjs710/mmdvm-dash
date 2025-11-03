@@ -151,7 +151,7 @@ class DashboardState:
             data=transmission.to_dict()
         )
         self.add_event(event)
-        logger.info(f"Transmission: {transmission.source} -> {transmission.destination} ({transmission.mode})")
+        logger.debug(f"Transmission: {transmission.source} -> {transmission.destination} ({transmission.mode})")
     
     def end_transmission(self, key: str, duration: float = 0.0):
         """Mark transmission as ended"""
@@ -170,7 +170,7 @@ class DashboardState:
             self.add_event(event)
             
             del self.active_transmissions[key]
-            logger.info(f"Transmission ended: {tx.source} -> {tx.destination} ({duration:.1f}s)")
+            logger.debug(f"Transmission ended: {tx.source} -> {tx.destination} ({duration:.1f}s)")
     
     def end_transmission_by_mode(self, mode: str):
         """End all active transmissions for a specific mode"""
@@ -178,7 +178,7 @@ class DashboardState:
         for key in keys_to_remove:
             self.end_transmission(key)
         if keys_to_remove:
-            logger.info(f"Ended {len(keys_to_remove)} transmission(s) for {mode}")
+            logger.debug(f"Ended {len(keys_to_remove)} transmission(s) for {mode}")
     
     def clear_all_transmissions(self):
         """Clear all active transmissions (e.g., when mode changes to IDLE)"""
