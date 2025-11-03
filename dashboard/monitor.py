@@ -40,7 +40,10 @@ class LogMonitor:
         self.running = True
         logger.info(f"Starting monitor for {self.name}: {self.path}")
         
-        # Seek to end of file to only read new entries
+        # Parse recent log entries to establish current state
+        await self.parse_recent_entries(lookback_lines=1000)
+        
+        # Now seek to end of file to only read new entries going forward
         try:
             self.last_position = self.path.stat().st_size
         except Exception as e:
@@ -54,6 +57,32 @@ class LogMonitor:
             except Exception as e:
                 logger.error(f"Error monitoring {self.name}: {e}")
                 await asyncio.sleep(5)  # Wait longer on error
+    
+    async def parse_recent_entries(self, lookback_lines: int = 1000):
+        """Parse recent log entries to establish current state on startup"""
+        try:
+            async with aiofiles.open(self.path, 'r', encoding='utf-8', errors='ignore') as f:
+                # Read all lines
+                all_lines = await f.readlines()
+                
+                # Take last N lines
+                recent_lines = all_lines[-lookback_lines:] if len(all_lines) > lookback_lines else all_lines
+                
+                logger.info(f"Parsing {len(recent_lines)} recent log entries from {self.name}")
+                
+                # Parse lines
+                for line in recent_lines:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    
+                    if self.parser:
+                        entry = self.parser.parse_line(line)
+                        if entry:
+                            await self.process_entry(entry)
+        
+        except Exception as e:
+            logger.error(f"Error parsing recent entries for {self.name}: {e}")
     
     async def check_for_updates(self):
         """Check for new log entries"""
