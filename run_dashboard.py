@@ -12,7 +12,7 @@ from dashboard.config_reader import initialize_config_manager
 from dashboard.monitor import monitor_manager
 
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
