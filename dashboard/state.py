@@ -83,6 +83,9 @@ class DashboardState:
         
         # Suppress broadcasts during initial log scanning
         self.suppress_broadcasts = False
+        
+        # Track last broadcast state to detect changes
+        self._last_broadcast_hash = None
     
     def update_mode(self, mode: str):
         """Update current operating mode"""
@@ -262,9 +265,18 @@ class DashboardState:
             'events': self.get_events(20)
         }
         
+        # Create a hash of the important state to detect changes
+        import json
+        state_hash = hash(json.dumps(message, sort_keys=True, default=str))
+        
+        # Skip broadcast if state hasn't changed
+        if state_hash == self._last_broadcast_hash:
+            logger.debug("State unchanged, skipping broadcast")
+            return
+        
+        self._last_broadcast_hash = state_hash
+        
         logger.debug(f"Broadcasting status update to {len(self.websocket_clients)} clients")
-        logger.debug(f"Gateway status being sent: dmr={status_data.get('gateways', {}).get('dmr', {})}, ysf={status_data.get('gateways', {}).get('ysf', {})}, p25={status_data.get('gateways', {}).get('p25', {})}")
-        logger.debug(f"Network status being sent: {status_data.get('networks', {})}")
         
         # Send to all clients, removing disconnected ones
         disconnected = []
