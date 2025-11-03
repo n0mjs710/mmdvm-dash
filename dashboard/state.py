@@ -229,7 +229,7 @@ class DashboardState:
         
         status_data = self.get_status()
         message = {
-            'type': 'status_update',
+            'type': 'state_update',  # Frontend expects 'state_update'
             'status': status_data
         }
         
