@@ -136,6 +136,23 @@ class LogMonitor:
             state.update_network_status('YSF', False)
             logger.info("YSF disconnect requested")
         
+        # DMR Gateway events
+        elif event_type == 'dmr_mmdvm_connected':
+            # DMRGateway connected to MMDVMHost (no disconnect is logged)
+            logger.info("DMR Gateway connected to MMDVM")
+        
+        elif event_type == 'dmr_network_connected':
+            # DMR network (e.g., HBlink4) logged in
+            network = entry.data.get('network', 'Unknown')
+            state.update_network_status(f'DMR-{network}', True)
+            logger.info(f"DMR network connected: {network}")
+        
+        elif event_type == 'dmr_network_disconnected':
+            # DMR network closing
+            network = entry.data.get('network', 'Unknown')
+            state.update_network_status(f'DMR-{network}', False)
+            logger.info(f"DMR network disconnected: {network}")
+        
         elif event_type in ['dmr_rx', 'dstar_rx', 'ysf_rx', 'p25_rx', 'nxdn_rx', 'fm_rx']:
             # Create transmission record
             transmission = Transmission(

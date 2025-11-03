@@ -450,8 +450,10 @@
                     <div class="status-indicator stopped"></div>
                 </div>
                 <div class="status-card-status">Not running</div>
-                <div class="status-card-networks" id="dmrGatewayNetworks">
-                    <div class="network-item">No networks</div>
+                
+                <!-- Network Pills -->
+                <div class="feature-pills" id="dmrNetworkPills">
+                    <!-- Pills will be populated by JavaScript -->
                 </div>
             </div>
             
@@ -633,8 +635,8 @@
                 mmdvmNetworks.innerHTML = '<div class="network-item">No modes detected</div>';
             }
             
-            // Update DMR Gateway
-            updateGatewayCard('dmrGateway', 'DMR Gateway', gateways.dmr || {});
+            // Update DMR Gateway (special handling for network pills)
+            updateDMRGatewayCard(gateways.dmr || {});
             
             // Update YSF Gateway (special handling for features and connections)
             updateYSFGatewayCard(gateways.ysf || {});
@@ -682,6 +684,50 @@
                 statusText.textContent = 'Not running';
                 networksDiv.innerHTML = '<div class="network-item">No networks</div>';
             }
+        }
+        
+        function updateDMRGatewayCard(gatewayData) {
+            const card = document.getElementById('dmrGatewayCard');
+            const indicator = card.querySelector('.status-indicator');
+            const statusText = card.querySelector('.status-card-status');
+            const networkPills = document.getElementById('dmrNetworkPills');
+            
+            const isRunning = gatewayData.is_running || false;
+            const enabled = gatewayData.enabled || false;
+            const networks = gatewayData.networks || {};
+            
+            // Update card status
+            statusText.style.display = 'none';
+            
+            if (isRunning && enabled) {
+                card.className = 'status-card running';
+                indicator.className = 'status-indicator running';
+            } else if (isRunning) {
+                card.className = 'status-card warning';
+                indicator.className = 'status-indicator warning';
+            } else {
+                card.className = 'status-card stopped';
+                indicator.className = 'status-indicator stopped';
+            }
+            
+            // Create pills for each enabled DMR network
+            // Networks object has network names as keys (e.g., 'BM_3102_United_States', 'HBlink4')
+            // Check state.status.networks for connection status (DMR-NetworkName)
+            let pillsHtml = '';
+            
+            if (Object.keys(networks).length > 0) {
+                pillsHtml = Object.entries(networks).map(([networkName, value]) => {
+                    // Check if this network is actually connected (from log parsing)
+                    const isConnected = state.status.networks?.[`DMR-${networkName}`] || false;
+                    const pillClass = isConnected ? 'enabled' : 'disabled';
+                    return `<span class="feature-pill ${pillClass}">${networkName}</span>`;
+                }).join('');
+            } else {
+                // No networks configured
+                pillsHtml = '<span style="color: #64748b; font-size: 12px; padding: 4px 0;">No networks enabled</span>';
+            }
+            
+            networkPills.innerHTML = pillsHtml;
         }
         
         function updateYSFGatewayCard(gatewayData) {

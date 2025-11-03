@@ -277,9 +277,14 @@ class DMRGatewayParser:
     
     TIMESTAMP_PATTERN = r'([MDISEWF]):\s+(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\.\d{3})\s+(.*)'
     
-    # Network patterns
-    NETWORK_PATTERN = r'DMR, (BrandMeister|TGIF|DMR\+|FreeDMR) Network'
-    LOGIN_PATTERN = r'Logged into the (.+) network'
+    # Key DMR Gateway events
+    MMDVM_CONNECTED_PATTERN = r'MMDVM has connected'  # Gateway linked to MMDVM (no disconnect logged)
+    
+    # Network connection events
+    NETWORK_LOGIN_PATTERN = r'(.+), Logged into the master successfully'  # Connection established
+    NETWORK_CLOSING_PATTERN = r'(.+), Closing DMR Network'  # Network disconnected
+    
+    # Legacy patterns (may not be in current logs)
     TALKGROUP_PATTERN = r'Received voice (?:header|data) from (\d+) to TG (\d+)'
     
     def __init__(self):
@@ -293,7 +298,7 @@ class DMRGatewayParser:
         
         level_char, timestamp_str, message = match.groups()
         
-        level_map = {'M': 'INFO', 'D': 'DEBUG', 'I': 'INFO', 'E': 'ERROR', 'W': 'WARNING'}
+        level_map = {'M': 'INFO', 'D': 'DEBUG', 'I': 'INFO', 'E': 'ERROR', 'W': 'WARNING', 'F': 'FATAL'}
         level = level_map.get(level_char, 'INFO')
         
         try:
@@ -303,15 +308,31 @@ class DMRGatewayParser:
         
         entry = LogEntry(timestamp, level, message, 'dmrgateway')
         
-        # Parse network activity
-        if match := re.search(self.LOGIN_PATTERN, message):
-            network = match.group(1)
+        # Check for MMDVM connection (no disconnect is logged by gateway)
+        if re.search(self.MMDVM_CONNECTED_PATTERN, message):
+            entry.data = {
+                'event': 'dmr_mmdvm_connected'
+            }
+        
+        # Check for network login (e.g., "HBlink4, Logged into the master successfully")
+        elif match := re.search(self.NETWORK_LOGIN_PATTERN, message):
+            network = match.group(1).strip()
             self.networks[network] = True
             entry.data = {
-                'event': 'network_login',
+                'event': 'dmr_network_connected',
                 'network': network
             }
         
+        # Check for network closing (e.g., "HBlink4, Closing DMR Network")
+        elif match := re.search(self.NETWORK_CLOSING_PATTERN, message):
+            network = match.group(1).strip()
+            self.networks[network] = False
+            entry.data = {
+                'event': 'dmr_network_disconnected',
+                'network': network
+            }
+        
+        # Talkgroup activity (legacy)
         elif match := re.search(self.TALKGROUP_PATTERN, message):
             entry.data = {
                 'event': 'talkgroup_activity',
