@@ -31,6 +31,13 @@ class Config:
                 "ysf_gateway_ini": "/etc/YSFGateway.ini",
                 "p25_gateway_ini": "/etc/P25Gateway.ini"
             },
+            "process_names": {
+                "mmdvmhost": "MMDVMHost",
+                "dmrgateway": "DMRGateway",
+                "ysfgateway": "YSFGateway",
+                "p25gateway": "P25Gateway",
+                "nxdngateway": "NXDNGateway"
+            },
             "history": {
                 "enabled": True,
                 "scan_on_startup": True,
