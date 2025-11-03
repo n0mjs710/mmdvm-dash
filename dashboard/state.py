@@ -200,7 +200,9 @@ class DashboardState:
         # Store enabled networks from MMDVM config
         enabled_networks = expected_state.get('enabled_networks', [])
         for network in enabled_networks:
-            self.status.networks[network] = True  # Mark as configured
+            # Only set to True if not already set to a specific target (reflector/TG)
+            if network not in self.status.networks or self.status.networks[network] is False:
+                self.status.networks[network] = True  # Mark as configured
         
         # Update gateway status
         gateways = expected_state.get('gateways', {})
