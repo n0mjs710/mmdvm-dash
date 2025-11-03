@@ -39,6 +39,12 @@ async def start_monitors():
         nxdn_gateway_ini=nxdn_gateway_ini
     )
     
+    # Get expected state and update dashboard state
+    expected_state = config_mgr.get_expected_state()
+    from dashboard.state import state
+    state.update_expected_state(expected_state)
+    logger.info(f"System state updated: MMDVMHost running={expected_state.get('mmdvm_running')}")
+    
     # Get all log paths from INI files
     log_paths = config_mgr.get_all_log_paths()
     

@@ -75,6 +75,89 @@
         .stat-label { color: #94a3b8; font-size: 12px; margin-bottom: 5px; }
         .stat-value { color: #e2e8f0; font-size: 28px; font-weight: 600; }
         
+        /* System Status Grid */
+        .system-status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        
+        .status-card {
+            background: #1e293b;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            border-left: 4px solid #475569;
+            transition: all 0.3s ease;
+        }
+        
+        .status-card.running {
+            border-left-color: #10b981;
+            background: #1e293b;
+        }
+        
+        .status-card.warning {
+            border-left-color: #f59e0b;
+            background: #1e293b;
+        }
+        
+        .status-card.stopped {
+            border-left-color: #475569;
+            background: #1a2332;
+            opacity: 0.6;
+        }
+        
+        .status-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .status-card-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #e2e8f0;
+        }
+        
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #475569;
+        }
+        
+        .status-indicator.running { background: #10b981; box-shadow: 0 0 8px #10b981; }
+        .status-indicator.warning { background: #f59e0b; box-shadow: 0 0 8px #f59e0b; }
+        .status-indicator.stopped { background: #475569; }
+        
+        .status-card-status {
+            font-size: 13px;
+            color: #94a3b8;
+            margin-bottom: 8px;
+        }
+        
+        .status-card-networks {
+            font-size: 12px;
+            color: #64748b;
+            line-height: 1.6;
+        }
+        
+        .status-card-networks .network-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 0;
+        }
+        
+        .status-card-networks .network-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #10b981;
+        }
+        
         .card { 
             background: #1e293b; 
             border-radius: 8px; 
@@ -252,6 +335,53 @@
             </div>
         </header>
 
+        <!-- System Status Grid -->
+        <div class="system-status-grid">
+            <div class="status-card stopped" id="mmdvmHostCard">
+                <div class="status-card-header">
+                    <div class="status-card-title">MMDVMHost</div>
+                    <div class="status-indicator stopped"></div>
+                </div>
+                <div class="status-card-status">Not running</div>
+                <div class="status-card-networks" id="mmdvmHostNetworks">
+                    <div class="network-item">No modes detected</div>
+                </div>
+            </div>
+            
+            <div class="status-card stopped" id="dmrGatewayCard">
+                <div class="status-card-header">
+                    <div class="status-card-title">DMR Gateway</div>
+                    <div class="status-indicator stopped"></div>
+                </div>
+                <div class="status-card-status">Not running</div>
+                <div class="status-card-networks" id="dmrGatewayNetworks">
+                    <div class="network-item">No networks</div>
+                </div>
+            </div>
+            
+            <div class="status-card stopped" id="ysfGatewayCard">
+                <div class="status-card-header">
+                    <div class="status-card-title">YSF Gateway</div>
+                    <div class="status-indicator stopped"></div>
+                </div>
+                <div class="status-card-status">Not running</div>
+                <div class="status-card-networks" id="ysfGatewayNetworks">
+                    <div class="network-item">No networks</div>
+                </div>
+            </div>
+            
+            <div class="status-card stopped" id="p25GatewayCard">
+                <div class="status-card-header">
+                    <div class="status-card-title">P25 Gateway</div>
+                    <div class="status-indicator stopped"></div>
+                </div>
+                <div class="status-card-status">Not running</div>
+                <div class="status-card-networks" id="p25GatewayNetworks">
+                    <div class="network-item">No networks</div>
+                </div>
+            </div>
+        </div>
+
         <!-- Statistics -->
         <div class="stats-bar">
             <div class="stat-card">
@@ -363,7 +493,87 @@
             }
         }
 
+        function updateSystemStatus() {
+            const status = state.status || {};
+            const gateways = status.gateways || {};
+            
+            // Update MMDVMHost
+            const mmdvmRunning = status.mmdvm_running || false;
+            const mmdvmCard = document.getElementById('mmdvmHostCard');
+            const mmdvmIndicator = mmdvmCard.querySelector('.status-indicator');
+            const mmdvmStatus = mmdvmCard.querySelector('.status-card-status');
+            const mmdvmNetworks = document.getElementById('mmdvmHostNetworks');
+            
+            if (mmdvmRunning) {
+                mmdvmCard.className = 'status-card running';
+                mmdvmIndicator.className = 'status-indicator running';
+                mmdvmStatus.textContent = 'Running';
+                
+                const modes = status.enabled_modes || [];
+                if (modes.length > 0) {
+                    mmdvmNetworks.innerHTML = modes.map(mode => 
+                        `<div class="network-item"><span class="network-dot"></span>${mode}</div>`
+                    ).join('');
+                } else {
+                    mmdvmNetworks.innerHTML = '<div class="network-item">No modes detected</div>';
+                }
+            } else {
+                mmdvmCard.className = 'status-card stopped';
+                mmdvmIndicator.className = 'status-indicator stopped';
+                mmdvmStatus.textContent = 'Not running';
+                mmdvmNetworks.innerHTML = '<div class="network-item">No modes detected</div>';
+            }
+            
+            // Update DMR Gateway
+            updateGatewayCard('dmrGateway', 'DMR Gateway', gateways.dmr || {});
+            
+            // Update YSF Gateway
+            updateGatewayCard('ysfGateway', 'YSF Gateway', gateways.ysf || {});
+            
+            // Update P25 Gateway
+            updateGatewayCard('p25Gateway', 'P25 Gateway', gateways.p25 || {});
+        }
+        
+        function updateGatewayCard(cardId, title, gatewayData) {
+            const card = document.getElementById(`${cardId}Card`);
+            const indicator = card.querySelector('.status-indicator');
+            const statusText = card.querySelector('.status-card-status');
+            const networksDiv = document.getElementById(`${cardId}Networks`);
+            
+            const isRunning = gatewayData.is_running || false;
+            const enabled = gatewayData.enabled || false;
+            const networks = gatewayData.networks || {};
+            const networkCount = Object.keys(networks).length;
+            
+            if (isRunning) {
+                if (enabled && networkCount > 0) {
+                    // Running with networks
+                    card.className = 'status-card running';
+                    indicator.className = 'status-indicator running';
+                    statusText.textContent = 'Running';
+                    networksDiv.innerHTML = Object.keys(networks).map(net =>
+                        `<div class="network-item"><span class="network-dot"></span>${net}</div>`
+                    ).join('');
+                } else {
+                    // Running but no networks
+                    card.className = 'status-card warning';
+                    indicator.className = 'status-indicator warning';
+                    statusText.textContent = 'Running - No networks';
+                    networksDiv.innerHTML = '<div class="network-item">No active networks</div>';
+                }
+            } else {
+                // Not running
+                card.className = 'status-card stopped';
+                indicator.className = 'status-indicator stopped';
+                statusText.textContent = 'Not running';
+                networksDiv.innerHTML = '<div class="network-item">No networks</div>';
+            }
+        }
+
         function updateUI() {
+            // Update system status cards
+            updateSystemStatus();
+            
             // Update mode
             document.getElementById('currentMode').textContent = state.status.current_mode || 'IDLE';
             

@@ -20,6 +20,11 @@ class SystemStatus:
     networks: Dict[str, bool] = field(default_factory=dict)
     last_update: float = field(default_factory=lambda: datetime.now().timestamp())
     
+    # Gateway and MMDVMHost operational status
+    mmdvm_running: bool = False
+    enabled_modes: List[str] = field(default_factory=list)
+    gateways: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
 
@@ -147,6 +152,25 @@ class DashboardState:
     def add_event(self, event: Event):
         """Add event to history"""
         self.events.append(event)
+    
+    def update_expected_state(self, expected_state: Dict[str, Any]):
+        """Update expected state from config reader"""
+        self.status.mmdvm_running = expected_state.get('mmdvm_running', False)
+        self.status.enabled_modes = expected_state.get('enabled_modes', [])
+        
+        # Update gateway status
+        gateways = expected_state.get('gateways', {})
+        self.status.gateways = {}
+        
+        for gw_name, gw_data in gateways.items():
+            self.status.gateways[gw_name] = {
+                'is_running': gw_data.get('is_running', False),
+                'enabled': gw_data.get('enabled', False),
+                'networks': gw_data.get('networks', {})
+            }
+        
+        self.status.last_update = datetime.now().timestamp()
+        logger.info(f"Updated expected state: MMDVMHost={self.status.mmdvm_running}, Gateways={list(self.status.gateways.keys())}")
     
     def get_recent_calls(self, limit: int = 10) -> List[Dict[str, Any]]:
         """Get recent calls"""

@@ -36,6 +36,10 @@ ENV/
 # Config
 config/config.json
 
+# Test configuration files (real system configs for development/testing)
+config/*.ini
+config/*.log
+
 # Logs
 logs/
 *.log

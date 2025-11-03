@@ -1,13 +1,48 @@
 """
 Configuration File Readers for MMDVM and Gateway Programs
-Reads INI files to understand expected system state
+Reads INI files to understand expected system state and checks process status
 """
 import configparser
+import subprocess
 from pathlib import Path
 from typing import Dict, List, Optional, Set
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+def is_process_running(process_name: str) -> bool:
+    """Check if a process is running via systemd or process list"""
+    # First try systemd
+    try:
+        result = subprocess.run(
+            ['systemctl', 'is-active', process_name],
+            capture_output=True,
+            text=True,
+            timeout=2
+        )
+        if result.stdout.strip() == 'active':
+            logger.debug(f"Process {process_name} is active via systemd")
+            return True
+    except (subprocess.SubprocessError, FileNotFoundError):
+        pass
+    
+    # Fallback to checking process list
+    try:
+        result = subprocess.run(
+            ['pgrep', '-f', process_name],
+            capture_output=True,
+            text=True,
+            timeout=2
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            logger.debug(f"Process {process_name} found in process list")
+            return True
+    except (subprocess.SubprocessError, FileNotFoundError):
+        pass
+    
+    logger.debug(f"Process {process_name} not running")
+    return False
 
 
 class MMDVMConfig:
@@ -19,6 +54,7 @@ class MMDVMConfig:
         self.enabled_modes: Set[str] = set()
         self.enabled_networks: Set[str] = set()
         self.log_settings = {}
+        self.is_running = is_process_running('MMDVMHost')
         
         if self.config_path.exists():
             self._load_config()
@@ -29,10 +65,14 @@ class MMDVMConfig:
         """Load and parse MMDVM.ini"""
         try:
             self.config.read(self.config_path)
-            self._parse_modes()
-            self._parse_networks()
-            self._parse_log_settings()
-            logger.info(f"Loaded MMDVM config: {len(self.enabled_modes)} modes, {len(self.enabled_networks)} networks")
+            # Only parse if MMDVMHost is running
+            if self.is_running:
+                self._parse_modes()
+                self._parse_networks()
+                self._parse_log_settings()
+                logger.info(f"Loaded MMDVM config: {len(self.enabled_modes)} modes, {len(self.enabled_networks)} networks")
+            else:
+                logger.warning("MMDVMHost config exists but process not running")
         except Exception as e:
             logger.error(f"Error loading MMDVM.ini: {e}")
     
@@ -131,11 +171,15 @@ class MMDVMConfig:
 class GatewayConfig:
     """Base class for gateway configuration readers"""
     
-    def __init__(self, config_path: str):
+    def __init__(self, config_path: str, process_name: str):
         self.config_path = Path(config_path)
+        self.process_name = process_name
         self.config = configparser.ConfigParser(strict=False)  # Allow duplicate keys
         self.enabled = False
         self.networks: Dict[str, bool] = {}
+        
+        # Check if process is actually running
+        self.is_running = is_process_running(process_name)
         
         if self.config_path.exists():
             self._load_config()
@@ -144,7 +188,11 @@ class GatewayConfig:
         """Load gateway config"""
         try:
             self.config.read(self.config_path)
-            self._parse_settings()
+            # Only parse if process is running
+            if self.is_running:
+                self._parse_settings()
+            else:
+                logger.debug(f"{self.process_name} config exists but process not running")
         except Exception as e:
             logger.error(f"Error loading {self.config_path}: {e}")
     
@@ -164,16 +212,12 @@ class GatewayConfig:
 class DMRGatewayConfig(GatewayConfig):
     """Parse DMRGateway.ini configuration"""
     
+    def __init__(self, config_path: str = "/etc/DMRGateway.ini"):
+        super().__init__(config_path, 'DMRGateway')
+    
     def _parse_settings(self):
         """Parse DMR Gateway specific settings"""
-        # Check if DMRGateway is enabled at all
-        if self.config.has_section('General'):
-            # Some configs use 'Enabled', others might use 'Enable'
-            enabled = (self.config.getboolean('General', 'Enabled', fallback=False) or
-                      self.config.getboolean('General', 'Enable', fallback=False))
-            if not enabled:
-                logger.debug("DMRGateway: General section exists but not enabled")
-                return
+        # Process is running, now check which networks are enabled
         
         # DMRGateway can connect to multiple networks
         network_sections = [
@@ -181,7 +225,8 @@ class DMRGatewayConfig(GatewayConfig):
             'DMR Network 2', 
             'DMR Network 3',
             'DMR Network 4',
-            'DMR Network 5'
+            'DMR Network 5',
+            'DMR Network Custom'
         ]
         
         for section in network_sections:
@@ -193,7 +238,7 @@ class DMRGatewayConfig(GatewayConfig):
                     name = self.config.get(section, 'Name', fallback=section)
                     logger.info(f"DMRGateway: Found enabled network '{name}'")
                     self.networks[name] = True
-                    self.enabled = True
+                    self.enabled = True  # Gateway is operational with at least one network
                 else:
                     logger.debug(f"DMRGateway: {section} exists but not enabled")
 
@@ -201,46 +246,77 @@ class DMRGatewayConfig(GatewayConfig):
 class YSFGatewayConfig(GatewayConfig):
     """Parse YSFGateway.ini configuration"""
     
+    def __init__(self, config_path: str = "/etc/YSFGateway.ini"):
+        super().__init__(config_path, 'YSFGateway')
+    
     def _parse_settings(self):
         """Parse YSF Gateway specific settings"""
-        if self.config.has_section('Network'):
-            # Check both 'Enable' and 'Enabled'
-            self.enabled = (self.config.getboolean('Network', 'Enable', fallback=False) or
-                           self.config.getboolean('Network', 'Enabled', fallback=False))
-            if self.enabled:
-                startup = self.config.get('Network', 'Startup', fallback='')
-                if startup:
-                    logger.info(f"YSFGateway: Enabled with startup '{startup}'")
-                    self.networks['Startup'] = startup
+        # YSFGateway is operational if config exists
+        # Check [YSF Network] for Enable flag and [Network] for startup
+        
+        if self.config.has_section('YSF Network'):
+            enabled = (self.config.getboolean('YSF Network', 'Enable', fallback=False) or
+                      self.config.getboolean('YSF Network', 'Enabled', fallback=False))
+            if enabled:
+                self.enabled = True
+                # Get startup network from [Network] section
+                if self.config.has_section('Network'):
+                    startup = self.config.get('Network', 'Startup', fallback='')
+                    if startup:
+                        logger.info(f"YSFGateway: Enabled with startup reflector '{startup}'")
+                        self.networks[startup] = True
+                    else:
+                        logger.info("YSFGateway: Enabled, no startup reflector")
+                        self.networks['YSFNetwork'] = True
                 else:
                     logger.info("YSFGateway: Enabled")
                     self.networks['YSFNetwork'] = True
             else:
-                logger.debug("YSFGateway: Network section exists but not enabled")
-        else:
-            logger.debug("YSFGateway: No Network section found")
+                logger.debug("YSFGateway: YSF Network not enabled")
+        
+        # Also check FCS Network
+        if self.config.has_section('FCS Network'):
+            enabled = (self.config.getboolean('FCS Network', 'Enable', fallback=False) or
+                      self.config.getboolean('FCS Network', 'Enabled', fallback=False))
+            if enabled:
+                self.enabled = True
+                logger.info("YSFGateway: FCS Network enabled")
+                self.networks['FCS'] = True
 
 
 class P25GatewayConfig(GatewayConfig):
     """Parse P25Gateway.ini configuration"""
     
+    def __init__(self, config_path: str = "/etc/P25Gateway.ini"):
+        super().__init__(config_path, 'P25Gateway')
+    
     def _parse_settings(self):
         """Parse P25 Gateway specific settings"""
+        # P25Gateway is operational if config exists
+        # Network section contains Startup and Static TG definitions
+        
         if self.config.has_section('Network'):
-            # Check both 'Enable' and 'Enabled'
-            self.enabled = (self.config.getboolean('Network', 'Enable', fallback=False) or
-                           self.config.getboolean('Network', 'Enabled', fallback=False))
-            if self.enabled:
-                logger.info("P25Gateway: Enabled")
-                self.networks['P25Network'] = True
+            # P25Gateway typically doesn't have Enable flag - presence of network config means it's operational
+            startup = self.config.get('Network', 'Startup', fallback='')
+            static = self.config.get('Network', 'Static', fallback='')
+            
+            if startup or static:
+                self.enabled = True
+                if startup:
+                    logger.info(f"P25Gateway: Operational with startup TG {startup}")
+                    self.networks[f"TG{startup}"] = True
+                if static and static != startup:
+                    logger.info(f"P25Gateway: Also has static TG {static}")
+                    self.networks[f"TG{static}"] = True
             else:
-                logger.debug("P25Gateway: Network section exists but not enabled")
-        else:
-            logger.debug("P25Gateway: No Network section found")
+                logger.debug("P25Gateway: Network section exists but no TGs configured")
 
 
 class NXDNGatewayConfig(GatewayConfig):
     """Parse NXDNGateway.ini configuration"""
+    
+    def __init__(self, config_path: str = "/etc/NXDNGateway.ini"):
+        super().__init__(config_path, 'NXDNGateway')
     
     def _parse_settings(self):
         """Parse NXDN Gateway specific settings"""
@@ -268,19 +344,23 @@ class ConfigManager:
     
     def get_expected_state(self) -> Dict:
         """Get the expected system state based on configuration files"""
-        return {
+        state = {
+            'mmdvm_running': self.mmdvm.is_running,
             'enabled_modes': list(self.mmdvm.enabled_modes),
             'enabled_networks': list(self.mmdvm.enabled_networks),
             'gateways': {
                 'dmr': {
+                    'is_running': self.dmr_gateway.is_running,
                     'enabled': self.dmr_gateway.enabled,
                     'networks': self.dmr_gateway.networks
                 },
                 'ysf': {
+                    'is_running': self.ysf_gateway.is_running,
                     'enabled': self.ysf_gateway.enabled,
                     'networks': self.ysf_gateway.networks
                 },
                 'p25': {
+                    'is_running': self.p25_gateway.is_running,
                     'enabled': self.p25_gateway.enabled,
                     'networks': self.p25_gateway.networks
                 }
@@ -291,52 +371,13 @@ class ConfigManager:
         
         # Add NXDN if configured
         if self.nxdn_gateway:
-            return_dict = {
-                'enabled_modes': list(self.mmdvm.enabled_modes),
-                'enabled_networks': list(self.mmdvm.enabled_networks),
-                'gateways': {
-                    'dmr': {
-                        'enabled': self.dmr_gateway.enabled,
-                        'networks': self.dmr_gateway.networks
-                    },
-                    'ysf': {
-                        'enabled': self.ysf_gateway.enabled,
-                        'networks': self.ysf_gateway.networks
-                    },
-                    'p25': {
-                        'enabled': self.p25_gateway.enabled,
-                        'networks': self.p25_gateway.networks
-                    },
-                    'nxdn': {
-                        'enabled': self.nxdn_gateway.enabled,
-                        'networks': self.nxdn_gateway.networks
-                    }
-                },
-                'modem': self.mmdvm.get_modem_settings(),
-                'info': self.mmdvm.get_info()
+            state['gateways']['nxdn'] = {
+                'is_running': self.nxdn_gateway.is_running,
+                'enabled': self.nxdn_gateway.enabled,
+                'networks': self.nxdn_gateway.networks
             }
-            return return_dict
         
-        return {
-            'enabled_modes': list(self.mmdvm.enabled_modes),
-            'enabled_networks': list(self.mmdvm.enabled_networks),
-            'gateways': {
-                'dmr': {
-                    'enabled': self.dmr_gateway.enabled,
-                    'networks': self.dmr_gateway.networks
-                },
-                'ysf': {
-                    'enabled': self.ysf_gateway.enabled,
-                    'networks': self.ysf_gateway.networks
-                },
-                'p25': {
-                    'enabled': self.p25_gateway.enabled,
-                    'networks': self.p25_gateway.networks
-                }
-            },
-            'modem': self.mmdvm.get_modem_settings(),
-            'info': self.mmdvm.get_info()
-        }
+        return state
     
     def get_all_log_paths(self) -> List[Path]:
         """Get all log file paths to monitor"""
