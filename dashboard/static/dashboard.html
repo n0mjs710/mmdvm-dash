@@ -365,12 +365,14 @@
         }
 
         function handleWebSocketMessage(data) {
+            console.log('Received WebSocket message:', data);
             if (data.type === 'initial_state' || data.type === 'state_update') {
                 state.status = data.status || {};
                 state.transmissions = data.active_transmissions || [];
                 state.recentCalls = data.recent_calls || [];
                 state.events = data.events || [];
                 
+                console.log('Updated state.status:', state.status);
                 updateUI();
             }
         }
@@ -378,6 +380,13 @@
         function updateSystemStatus() {
             const status = state.status || {};
             const gateways = status.gateways || {};
+            
+            console.log('updateSystemStatus called with:', {
+                mmdvm_running: status.mmdvm_running,
+                enabled_modes: status.enabled_modes,
+                enabled_networks: status.enabled_networks,
+                gateways: gateways
+            });
             
             // Update MMDVMHost - show RF modes and Network modes
             const mmdvmRunning = status.mmdvm_running || false;
