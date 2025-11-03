@@ -184,7 +184,7 @@
         .status-card-networks .protocol-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 4px;
+            gap: 8px;
         }
         
         .card { 
@@ -411,29 +411,35 @@
                 
                 let html = '';
                 
-                if (modes.length > 0) {
-                    html += '<div class="protocol-section">';
-                    html += '<div class="protocol-label">RF Modes</div>';
+                if (modes.length > 0 || networks.length > 0) {
                     html += '<div class="protocol-grid">';
-                    html += modes.map(mode => 
-                        `<div class="network-item"><span class="network-dot"></span>${mode}</div>`
-                    ).join('');
+                    
+                    // RF Modes column
+                    if (modes.length > 0) {
+                        html += '<div class="protocol-section">';
+                        html += '<div class="protocol-label">RF Modes</div>';
+                        html += modes.map(mode => 
+                            `<div class="network-item"><span class="network-dot"></span>${mode}</div>`
+                        ).join('');
+                        html += '</div>';
+                    } else {
+                        html += '<div class="protocol-section"></div>';
+                    }
+                    
+                    // Networks column
+                    if (networks.length > 0) {
+                        html += '<div class="protocol-section">';
+                        html += '<div class="protocol-label">Networks</div>';
+                        html += networks.map(net => 
+                            `<div class="network-item"><span class="network-dot"></span>${net}</div>`
+                        ).join('');
+                        html += '</div>';
+                    } else {
+                        html += '<div class="protocol-section"></div>';
+                    }
+                    
                     html += '</div>';
-                    html += '</div>';
-                }
-                
-                if (networks.length > 0) {
-                    html += '<div class="protocol-section">';
-                    html += '<div class="protocol-label">Networks</div>';
-                    html += '<div class="protocol-grid">';
-                    html += networks.map(net => 
-                        `<div class="network-item"><span class="network-dot"></span>${net}</div>`
-                    ).join('');
-                    html += '</div>';
-                    html += '</div>';
-                }
-                
-                if (html === '') {
+                } else {
                     html = '<div class="network-item">No modes detected</div>';
                 }
                 
