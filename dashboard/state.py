@@ -96,6 +96,9 @@ class DashboardState:
         )
         self.add_event(event)
         logger.info(f"Mode changed: {old_mode} -> {mode}")
+        
+        # Immediate broadcast for mode changes (critical for responsive UI)
+        asyncio.create_task(self.broadcast_status_update())
     
     def update_network_status(self, network: str, connected: bool, target: str = None):
         """Update network connection status
@@ -152,6 +155,9 @@ class DashboardState:
         )
         self.add_event(event)
         logger.debug(f"Transmission: {transmission.source} -> {transmission.destination} ({transmission.mode})")
+        
+        # Trigger immediate broadcast for transmission events (user wants responsive UI)
+        asyncio.create_task(self.broadcast_status_update())
     
     def end_transmission(self, key: str, duration: float = 0.0):
         """Mark transmission as ended"""
@@ -171,6 +177,9 @@ class DashboardState:
             
             del self.active_transmissions[key]
             logger.debug(f"Transmission ended: {tx.source} -> {tx.destination} ({duration:.1f}s)")
+            
+            # Trigger immediate broadcast for transmission end
+            asyncio.create_task(self.broadcast_status_update())
     
     def end_transmission_by_mode(self, mode: str):
         """End all active transmissions for a specific mode"""

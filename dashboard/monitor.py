@@ -53,7 +53,7 @@ class LogMonitor:
         while self.running:
             try:
                 await self.check_for_updates()
-                await asyncio.sleep(1.0)  # Check every second (optimized for resource usage)
+                await asyncio.sleep(0.5)  # Check twice per second for responsive UI
             except Exception as e:
                 logger.error(f"Error monitoring {self.name}: {e}")
                 await asyncio.sleep(5)  # Wait longer on error
