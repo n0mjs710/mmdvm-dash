@@ -153,30 +153,27 @@ class MMDVMConfig:
         }
     
     def get_info(self) -> Dict:
-        """Get station info"""
+        """Get station info from [General] and [Info] sections"""
         info = {}
         
-        # Get DMR ID from [General] section
+        # Get callsign and DMR ID from [General] section
         if self.config.has_section('General'):
-            info['dmr_id'] = self.config.get('General', 'Id', fallback='')
+            info['callsign'] = self.config.get('General', 'Callsign', fallback='').strip('"').strip("'")
+            info['dmr_id'] = self.config.get('General', 'Id', fallback='').strip('"').strip("'")
         
-        # Get rest from [Info] section
-        if not self.config.has_section('Info'):
-            return info
-        
-        info.update({
-            'callsign': self.config.get('Info', 'Callsign', fallback='').strip('"').strip("'"),
-            'id': self.config.get('Info', 'Id', fallback=''),
-            'rx_frequency': self.config.get('Info', 'RXFrequency', fallback=''),
-            'tx_frequency': self.config.get('Info', 'TXFrequency', fallback=''),
-            'power': self.config.get('Info', 'Power', fallback=''),
-            'latitude': self.config.get('Info', 'Latitude', fallback=''),
-            'longitude': self.config.get('Info', 'Longitude', fallback=''),
-            'height': self.config.get('Info', 'Height', fallback=''),
-            'location': self.config.get('Info', 'Location', fallback='').strip('"').strip("'"),
-            'description': self.config.get('Info', 'Description', fallback='').strip('"').strip("'"),
-            'url': self.config.get('Info', 'URL', fallback='')
-        })
+        # Get rest from [Info] section (if it exists)
+        if self.config.has_section('Info'):
+            info.update({
+                'rx_frequency': self.config.get('Info', 'RXFrequency', fallback=''),
+                'tx_frequency': self.config.get('Info', 'TXFrequency', fallback=''),
+                'power': self.config.get('Info', 'Power', fallback=''),
+                'latitude': self.config.get('Info', 'Latitude', fallback=''),
+                'longitude': self.config.get('Info', 'Longitude', fallback=''),
+                'height': self.config.get('Info', 'Height', fallback=''),
+                'location': self.config.get('Info', 'Location', fallback='').strip('"').strip("'"),
+                'description': self.config.get('Info', 'Description', fallback='').strip('"').strip("'"),
+                'url': self.config.get('Info', 'URL', fallback='')
+            })
         
         return info
 
