@@ -480,7 +480,7 @@ class P25GatewayParser:
 def get_parser(source: str):
     """Get appropriate parser for a log source"""
     parsers = {
-        'mmdvm': MMDVMParser,
+        'mmdvm': MMDVMHostParser,
         'dmrgateway': DMRGatewayParser,
         'ysfgateway': YSFGatewayParser,
         'p25gateway': P25GatewayParser,
