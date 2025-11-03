@@ -637,8 +637,9 @@
             } else {
                 mmdvmCard.className = 'status-card stopped';
                 mmdvmIndicator.className = 'status-indicator stopped';
+                mmdvmStatus.style.display = 'block';
                 mmdvmStatus.textContent = 'Not running';
-                mmdvmNetworks.innerHTML = '<div class="network-item">No modes detected</div>';
+                mmdvmNetworks.innerHTML = '';  // Clear pills when stopped
             }
             
             // Update DMR Gateway (special handling for network pills)
@@ -703,44 +704,51 @@
             const networks = gatewayData.networks || {};
             
             // Update card status
-            statusText.style.display = 'none';
-            
             if (isRunning && enabled) {
                 card.className = 'status-card running';
                 indicator.className = 'status-indicator running';
+                statusText.style.display = 'none';
             } else if (isRunning) {
                 card.className = 'status-card warning';
                 indicator.className = 'status-indicator warning';
+                statusText.style.display = 'none';
             } else {
                 card.className = 'status-card stopped';
                 indicator.className = 'status-indicator stopped';
+                statusText.style.display = 'block';
+                statusText.textContent = 'Not running';
             }
             
-            // Build pills: MMDVM connection first, then network pills
-            let pillsHtml = '';
-            
-            // MMDVM connection pill (check if gateway connected to MMDVM)
-            const mmdvmConnected = state.status.networks?.['DMR-MMDVM'] || false;
-            const mmdvmClass = mmdvmConnected ? 'enabled' : 'disabled';
-            pillsHtml += `<span class="feature-pill ${mmdvmClass}">MMDVM</span>`;
-            
-            // Create pills for each enabled DMR network
-            // Networks object has network names as keys (e.g., 'BM_3102_United_States', 'HBlink4')
-            // Check state.status.networks for connection status (DMR-NetworkName)
-            if (Object.keys(networks).length > 0) {
-                pillsHtml += Object.entries(networks).map(([networkName, value]) => {
-                    // Check if this network is actually connected (from log parsing)
-                    const isConnected = state.status.networks?.[`DMR-${networkName}`] || false;
-                    const pillClass = isConnected ? 'enabled' : 'disabled';
-                    return `<span class="feature-pill ${pillClass}">${networkName}</span>`;
-                }).join('');
+            if (isRunning && enabled) {
+                // Build pills: MMDVM connection first, then network pills
+                let pillsHtml = '';
+                
+                // MMDVM connection pill (check if gateway connected to MMDVM)
+                const mmdvmConnected = state.status.networks?.['DMR-MMDVM'] || false;
+                const mmdvmClass = mmdvmConnected ? 'enabled' : 'disabled';
+                pillsHtml += `<span class="feature-pill ${mmdvmClass}">MMDVM</span>`;
+                
+                // Create pills for each enabled DMR network
+                // Networks object has network names as keys (e.g., 'BM_3102_United_States', 'HBlink4')
+                // Check state.status.networks for connection status (DMR-NetworkName)
+                if (Object.keys(networks).length > 0) {
+                    pillsHtml += Object.entries(networks).map(([networkName, value]) => {
+                        // Check if this network is actually connected (from log parsing)
+                        const isConnected = state.status.networks?.[`DMR-${networkName}`] || false;
+                        const pillClass = isConnected ? 'enabled' : 'disabled';
+                        return `<span class="feature-pill ${pillClass}">${networkName}</span>`;
+                    }).join('');
+                }
+                
+                if (pillsHtml === '') {
+                    pillsHtml = '<span style="color: #64748b; font-size: 12px; padding: 4px 0;">No networks enabled</span>';
+                }
+                
+                networkPills.innerHTML = pillsHtml;
+            } else {
+                // Gateway not running - clear pills
+                networkPills.innerHTML = '';
             }
-            
-            if (pillsHtml === '') {
-                pillsHtml = '<span style="color: #64748b; font-size: 12px; padding: 4px 0;">No networks enabled</span>';
-            }
-            
-            networkPills.innerHTML = pillsHtml;
         }
         
         function updateYSFGatewayCard(gatewayData) {
@@ -754,68 +762,74 @@
             const enabled = gatewayData.enabled || false;
             const networks = gatewayData.networks || {};
             
-            // Update card status - visual indicators (green border, green dots) show running state
-            // No need for redundant "Running" text
-            statusText.style.display = 'none';
-            
+            // Update card status
             if (isRunning && enabled) {
                 card.className = 'status-card running';
                 indicator.className = 'status-indicator running';
+                statusText.style.display = 'none';
             } else if (isRunning) {
                 card.className = 'status-card warning';
                 indicator.className = 'status-indicator warning';
+                statusText.style.display = 'none';
             } else {
                 card.className = 'status-card stopped';
                 indicator.className = 'status-indicator stopped';
+                statusText.style.display = 'block';
+                statusText.textContent = 'Not running';
             }
             
-            // Build all pills: core features first, then auxiliary features
-            let pillsHtml = '';
-            
-            // Core network features (YSF, FCS)
-            const coreFeatures = ['YSF', 'FCS'];
-            pillsHtml += coreFeatures.map(feature => {
-                const isEnabled = networks.hasOwnProperty(feature);
-                const pillClass = isEnabled ? 'enabled' : 'disabled';
-                return `<span class="feature-pill ${pillClass}">${feature}</span>`;
-            }).join('');
-            
-            // Connection pills (Reflector, MMDVM)
-            // Check for YSF reflector connection
-            let reflectorName = null;
-            if (networks.YSF && typeof networks.YSF === 'string' && networks.YSF !== 'Enabled') {
-                reflectorName = networks.YSF;
+            if (isRunning && enabled) {
+                // Build all pills: core features first, then auxiliary features
+                let pillsHtml = '';
+                
+                // Core network features (YSF, FCS)
+                const coreFeatures = ['YSF', 'FCS'];
+                pillsHtml += coreFeatures.map(feature => {
+                    const isEnabled = networks.hasOwnProperty(feature);
+                    const pillClass = isEnabled ? 'enabled' : 'disabled';
+                    return `<span class="feature-pill ${pillClass}">${feature}</span>`;
+                }).join('');
+                
+                // Connection pills (Reflector, MMDVM)
+                // Check for YSF reflector connection
+                let reflectorName = null;
+                if (networks.YSF && typeof networks.YSF === 'string' && networks.YSF !== 'Enabled') {
+                    reflectorName = networks.YSF;
+                }
+                const reflectorConnected = state.status.networks?.YSF || false;
+                const reflectorClass = reflectorConnected ? 'enabled' : 'disabled';
+                pillsHtml += `<span class="feature-pill ${reflectorClass}">Reflector</span>`;
+                
+                // MMDVM connection (tracked from log parsing)
+                const mmdvmConnected = state.status.networks?.['YSF-MMDVM'] || false;
+                const mmdvmClass = mmdvmConnected ? 'enabled' : 'disabled';
+                pillsHtml += `<span class="feature-pill ${mmdvmClass}">MMDVM</span>`;
+                
+                // Auxiliary features last (APRS, GPSD)
+                const auxFeatures = ['APRS', 'GPSD'];
+                pillsHtml += auxFeatures.map(feature => {
+                    const isEnabled = networks.hasOwnProperty(feature);
+                    const pillClass = isEnabled ? 'enabled' : 'disabled';
+                    return `<span class="feature-pill ${pillClass}">${feature}</span>`;
+                }).join('');
+                
+                featurePills.innerHTML = pillsHtml;
+                
+                // Show reflector name below pills if connected
+                let connectionsHtml = '';
+                if (reflectorName && reflectorConnected) {
+                    connectionsHtml = `
+                        <div style="padding: 8px 0; color: #e2e8f0; font-size: 13px;">
+                            <span style="color: #94a3b8;">Linked to reflector:</span> <span style="font-weight: 500;">${reflectorName}</span>
+                        </div>
+                    `;
+                }
+                connections.innerHTML = connectionsHtml;
+            } else {
+                // Gateway not running - clear pills and connections
+                featurePills.innerHTML = '';
+                connections.innerHTML = '';
             }
-            const reflectorConnected = state.status.networks?.YSF || false;
-            const reflectorClass = reflectorConnected ? 'enabled' : 'disabled';
-            pillsHtml += `<span class="feature-pill ${reflectorClass}">Reflector</span>`;
-            
-            // MMDVM connection (tracked from log parsing)
-            const mmdvmConnected = state.status.networks?.['YSF-MMDVM'] || false;
-            const mmdvmClass = mmdvmConnected ? 'enabled' : 'disabled';
-            pillsHtml += `<span class="feature-pill ${mmdvmClass}">MMDVM</span>`;
-            
-            // Auxiliary features last (APRS, GPSD)
-            const auxFeatures = ['APRS', 'GPSD'];
-            pillsHtml += auxFeatures.map(feature => {
-                const isEnabled = networks.hasOwnProperty(feature);
-                const pillClass = isEnabled ? 'enabled' : 'disabled';
-                return `<span class="feature-pill ${pillClass}">${feature}</span>`;
-            }).join('');
-            
-            featurePills.innerHTML = pillsHtml;
-            
-            // Show reflector name below pills if connected
-            let connectionsHtml = '';
-            if (reflectorName && reflectorConnected) {
-                connectionsHtml = `
-                    <div style="padding: 8px 0; color: #e2e8f0; font-size: 13px;">
-                        <span style="color: #94a3b8;">Linked to reflector:</span> <span style="font-weight: 500;">${reflectorName}</span>
-                    </div>
-                `;
-            }
-            
-            connections.innerHTML = connectionsHtml;
         }
 
         function updateP25GatewayCard(gatewayData) {
@@ -830,53 +844,60 @@
             const networks = gatewayData.networks || {};
             
             // Update card status
-            statusText.style.display = 'none';
-            
             if (isRunning && enabled) {
                 card.className = 'status-card running';
                 indicator.className = 'status-indicator running';
+                statusText.style.display = 'none';
             } else if (isRunning) {
                 card.className = 'status-card warning';
                 indicator.className = 'status-indicator warning';
+                statusText.style.display = 'none';
             } else {
                 card.className = 'status-card stopped';
                 indicator.className = 'status-indicator stopped';
+                statusText.style.display = 'block';
+                statusText.textContent = 'Not running';
             }
             
             // Build pills: P25 network, Reflector, MMDVM
             let pillsHtml = '';
             
-            // P25 network pill (check if connected)
-            const p25Connected = state.status.networks?.P25 || false;
-            const p25Class = p25Connected ? 'enabled' : 'disabled';
-            pillsHtml += `<span class="feature-pill ${p25Class}">P25</span>`;
-            
-            // Reflector pill
-            let reflectorName = null;
-            if (state.status.networks?.P25 && typeof state.status.networks.P25 === 'string') {
-                reflectorName = state.status.networks.P25;
+            if (isRunning && enabled) {
+                // P25 network pill (check if connected)
+                const p25Connected = state.status.networks?.P25 || false;
+                const p25Class = p25Connected ? 'enabled' : 'disabled';
+                pillsHtml += `<span class="feature-pill ${p25Class}">P25</span>`;
+                
+                // Reflector pill
+                let reflectorName = null;
+                if (state.status.networks?.P25 && typeof state.status.networks.P25 === 'string') {
+                    reflectorName = state.status.networks.P25;
+                }
+                const reflectorClass = p25Connected ? 'enabled' : 'disabled';
+                pillsHtml += `<span class="feature-pill ${reflectorClass}">Reflector</span>`;
+                
+                // MMDVM connection (tracked from log parsing)
+                const mmdvmConnected = state.status.networks?.['P25-MMDVM'] || false;
+                const mmdvmClass = mmdvmConnected ? 'enabled' : 'disabled';
+                pillsHtml += `<span class="feature-pill ${mmdvmClass}">MMDVM</span>`;
+                
+                featurePills.innerHTML = pillsHtml;
+                
+                // Show reflector number if linked
+                let connectionsHtml = '';
+                if (reflectorName && p25Connected) {
+                    connectionsHtml = `
+                        <div style="padding: 8px 0; color: #e2e8f0; font-size: 13px;">
+                            <span style="color: #94a3b8;">Linked to reflector:</span> <span style="font-weight: 500;">${reflectorName}</span>
+                        </div>
+                    `;
+                }
+                connections.innerHTML = connectionsHtml;
+            } else {
+                // Gateway not running - clear pills and connections
+                featurePills.innerHTML = '';
+                connections.innerHTML = '';
             }
-            const reflectorClass = p25Connected ? 'enabled' : 'disabled';
-            pillsHtml += `<span class="feature-pill ${reflectorClass}">Reflector</span>`;
-            
-            // MMDVM connection (tracked from log parsing)
-            const mmdvmConnected = state.status.networks?.['P25-MMDVM'] || false;
-            const mmdvmClass = mmdvmConnected ? 'enabled' : 'disabled';
-            pillsHtml += `<span class="feature-pill ${mmdvmClass}">MMDVM</span>`;
-            
-            featurePills.innerHTML = pillsHtml;
-            
-            // Show reflector number if linked
-            let connectionsHtml = '';
-            if (reflectorName && p25Connected) {
-                connectionsHtml = `
-                    <div style="padding: 8px 0; color: #e2e8f0; font-size: 13px;">
-                        <span style="color: #94a3b8;">Linked to reflector:</span> <span style="font-weight: 500;">${reflectorName}</span>
-                    </div>
-                `;
-            }
-            
-            connections.innerHTML = connectionsHtml;
         }
 
         function updateUI() {
