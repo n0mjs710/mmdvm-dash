@@ -13,38 +13,81 @@ from .config import config
 logger = logging.getLogger(__name__)
 
 
+# Cache for process status to avoid repeated checks
+_process_cache = {}
+_cache_timestamp = 0
+
+
+def check_all_processes(process_names: List[str]) -> Dict[str, bool]:
+    """
+    Check multiple processes in a single operation (optimized)
+    Returns dict mapping process_name -> is_running
+    """
+    import time
+    global _process_cache, _cache_timestamp
+    
+    # Use cache if less than 1 second old
+    current_time = time.time()
+    if current_time - _cache_timestamp < 1.0:
+        return {name: _process_cache.get(name, False) for name in process_names}
+    
+    results = {}
+    
+    # Try systemctl for all processes at once
+    systemctl_results = {}
+    try:
+        # Check all services in one systemctl call
+        for process_name in process_names:
+            try:
+                result = subprocess.run(
+                    ['systemctl', 'is-active', process_name],
+                    capture_output=True,
+                    text=True,
+                    timeout=1
+                )
+                systemctl_results[process_name] = (result.stdout.strip() == 'active')
+            except:
+                systemctl_results[process_name] = False
+    except:
+        pass
+    
+    # Get all processes in one ps call
+    try:
+        result = subprocess.run(
+            ['ps', 'aux'],
+            capture_output=True,
+            text=True,
+            timeout=2
+        )
+        process_list = result.stdout.lower()
+        
+        for process_name in process_names:
+            # Check systemctl first, then fallback to ps
+            if systemctl_results.get(process_name, False):
+                results[process_name] = True
+            else:
+                # Case-insensitive search in process list
+                results[process_name] = process_name.lower() in process_list
+            
+            logger.debug(f"Process {process_name}: {results[process_name]}")
+    
+    except Exception as e:
+        logger.error(f"Error checking processes: {e}")
+        # Fallback to False for all
+        results = {name: False for name in process_names}
+    
+    # Update cache
+    _process_cache = results
+    _cache_timestamp = current_time
+    
+    return results
+
+
 def is_process_running(process_name: str) -> bool:
-    """Check if a process is running via systemd or process list (case-insensitive)"""
-    # First try systemd
-    try:
-        result = subprocess.run(
-            ['systemctl', 'is-active', process_name],
-            capture_output=True,
-            text=True,
-            timeout=2
-        )
-        if result.stdout.strip() == 'active':
-            logger.debug(f"Process {process_name} is active via systemd")
-            return True
-    except (subprocess.SubprocessError, FileNotFoundError):
-        pass
-    
-    # Fallback to checking process list (case-insensitive)
-    try:
-        result = subprocess.run(
-            ['pgrep', '-i', '-f', process_name],
-            capture_output=True,
-            text=True,
-            timeout=2
-        )
-        if result.returncode == 0 and result.stdout.strip():
-            logger.debug(f"Process {process_name} found in process list")
-            return True
-    except (subprocess.SubprocessError, FileNotFoundError):
-        pass
-    
-    logger.debug(f"Process {process_name} not running")
-    return False
+    """Check if a process is running (uses cached check_all_processes)"""
+    # Use the optimized batch check with cache
+    result = check_all_processes([process_name])
+    return result.get(process_name, False)
 
 
 class MMDVMConfig:
@@ -369,6 +412,30 @@ class ConfigManager:
         self.ysf_gateway = YSFGatewayConfig(ysf_gateway_ini)
         self.p25_gateway = P25GatewayConfig(p25_gateway_ini)
         self.nxdn_gateway = NXDNGatewayConfig(nxdn_gateway_ini) if nxdn_gateway_ini else None
+    
+    def refresh_process_status(self):
+        """Efficiently refresh all process statuses in a single batch check"""
+        # Collect all process names
+        process_names = [
+            config.get('process_names', 'mmdvmhost', default='mmdvmhost'),
+            config.get('process_names', 'dmrgateway', default='DMRGateway'),
+            config.get('process_names', 'ysfgateway', default='YSFGateway'),
+            config.get('process_names', 'p25gateway', default='P25Gateway'),
+        ]
+        
+        if self.nxdn_gateway:
+            process_names.append(config.get('process_names', 'nxdngateway', default='NXDNGateway'))
+        
+        # Single optimized check for all processes
+        results = check_all_processes(process_names)
+        
+        # Update each component
+        self.mmdvm.is_running = results.get(process_names[0], False)
+        self.dmr_gateway.is_running = results.get(process_names[1], False)
+        self.ysf_gateway.is_running = results.get(process_names[2], False)
+        self.p25_gateway.is_running = results.get(process_names[3], False)
+        if self.nxdn_gateway:
+            self.nxdn_gateway.is_running = results.get(process_names[4], False)
     
     def get_expected_state(self) -> Dict:
         """Get the expected system state based on configuration files"""

@@ -2,6 +2,7 @@
 Dashboard State Management
 Maintains current system state and recent activity
 """
+import asyncio
 from collections import deque
 from datetime import datetime
 from typing import Dict, List, Any, Set
@@ -75,6 +76,10 @@ class DashboardState:
             'calls_by_mode': {},
             'active_users': set()
         }
+        
+        # Debouncing for broadcasts
+        self._broadcast_pending = False
+        self._broadcast_task = None
     
     def update_mode(self, mode: str):
         """Update current operating mode"""
@@ -210,6 +215,50 @@ class DashboardState:
         
         self.status.last_update = datetime.now().timestamp()
         logger.info(f"Updated expected state: MMDVMHost={self.status.mmdvm_running}, Networks={enabled_networks}, Gateways={list(self.status.gateways.keys())}")
+        
+        # Schedule debounced broadcast instead of immediate
+        self.schedule_broadcast()
+    
+    async def broadcast_status_update(self):
+        """Broadcast status update to all connected WebSocket clients"""
+        if not self.websocket_clients:
+            return
+        
+        status_data = self.get_status()
+        message = {
+            'type': 'status_update',
+            'status': status_data
+        }
+        
+        # Send to all clients, removing disconnected ones
+        disconnected = []
+        for client in self.websocket_clients.copy():
+            try:
+                await client.send_json(message)
+            except Exception:
+                disconnected.append(client)
+        
+        # Remove disconnected clients
+        for client in disconnected:
+            self.websocket_clients.discard(client)
+    
+    def schedule_broadcast(self):
+        """Schedule a debounced broadcast (batches updates every 500ms)"""
+        if self._broadcast_pending:
+            return  # Already scheduled
+        
+        self._broadcast_pending = True
+        
+        async def debounced_broadcast():
+            await asyncio.sleep(0.5)  # Wait 500ms to batch updates
+            self._broadcast_pending = False
+            await self.broadcast_status_update()
+        
+        # Cancel previous task if exists
+        if self._broadcast_task and not self._broadcast_task.done():
+            self._broadcast_task.cancel()
+        
+        self._broadcast_task = asyncio.create_task(debounced_broadcast())
     
     def get_recent_calls(self, limit: int = 10) -> List[Dict[str, Any]]:
         """Get recent calls"""

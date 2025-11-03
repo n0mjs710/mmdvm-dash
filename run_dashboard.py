@@ -100,7 +100,10 @@ async def update_process_status(config_mgr):
         try:
             await asyncio.sleep(5)  # Check every 5 seconds
             
-            # Get fresh process status
+            # Refresh all process statuses in one efficient batch operation
+            config_mgr.refresh_process_status()
+            
+            # Get fresh state and broadcast
             expected_state = config_mgr.get_expected_state()
             state.update_expected_state(expected_state)
             

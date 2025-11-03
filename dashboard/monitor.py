@@ -53,7 +53,7 @@ class LogMonitor:
         while self.running:
             try:
                 await self.check_for_updates()
-                await asyncio.sleep(0.5)  # Check twice per second
+                await asyncio.sleep(1.0)  # Check every second (optimized for resource usage)
             except Exception as e:
                 logger.error(f"Error monitoring {self.name}: {e}")
                 await asyncio.sleep(5)  # Wait longer on error
@@ -266,34 +266,6 @@ class LogMonitor:
         elif event_type == 'modem_info':
             state.status.modem_connected = True
             state.status.modem_description = entry.data.get('description', '')
-        
-        # Broadcast to connected websockets
-        await self.broadcast_update()
-    
-    async def broadcast_update(self):
-        """Broadcast state update to all connected WebSocket clients"""
-        if not state.websocket_clients:
-            return
-        
-        update = {
-            'type': 'state_update',
-            'status': state.get_status(),
-            'active_transmissions': state.get_active_transmissions(),
-            'recent_calls': state.get_recent_calls(10),
-            'events': state.get_events(20)
-        }
-        
-        # Send to all clients
-        disconnected_clients = set()
-        for client in state.websocket_clients:
-            try:
-                await client.send_json(update)
-            except Exception as e:
-                logger.debug(f"Failed to send to client: {e}")
-                disconnected_clients.add(client)
-        
-        # Remove disconnected clients
-        state.websocket_clients -= disconnected_clients
     
     def stop(self):
         """Stop monitoring"""
@@ -332,21 +304,3 @@ class LogMonitorManager:
 
 # Global monitor manager
 monitor_manager = LogMonitorManager()
-
-
-async def initialize_monitors():
-    """
-    Initialize log monitors from configuration
-    
-    NOTE: This needs to be updated to use config_reader.ConfigManager
-    to read log paths from INI files instead of config.json
-    """
-    log_files_config = config.get('log_files', default={})
-    
-    for name, settings in log_files_config.items():
-        if settings.get('enabled', False):
-            path = settings.get('path')
-            if path:
-                monitor_manager.add_monitor(name, path, name)
-    
-    await monitor_manager.start_all()
