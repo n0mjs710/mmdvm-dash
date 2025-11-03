@@ -263,6 +263,73 @@
             }
         }
         
+        /* Feature Pills (for gateway features like YSF, FCS, APRS, GPSD) */
+        .feature-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin: 8px 0;
+        }
+        
+        .feature-pill {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            transition: all 0.2s;
+        }
+        
+        .feature-pill.enabled {
+            background: #3b82f6;
+            color: #dbeafe;
+        }
+        
+        .feature-pill.disabled {
+            background: transparent;
+            border: 1px solid #475569;
+            color: #64748b;
+        }
+        
+        /* Connection Status (for reflector connections, MMDVM links) */
+        .connection-status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 0;
+            font-size: 13px;
+            color: #cbd5e1;
+        }
+        
+        .connection-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        
+        .connection-dot.connected {
+            background: #10b981;
+            box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+        }
+        
+        .connection-dot.disconnected {
+            background: #64748b;
+        }
+        
+        .connection-label {
+            color: #94a3b8;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .connection-value {
+            color: #e2e8f0;
+            font-weight: 500;
+        }
+        
         .card { 
             background: #1e293b; 
             border-radius: 8px; 
@@ -394,8 +461,15 @@
                     <div class="status-indicator stopped"></div>
                 </div>
                 <div class="status-card-status">Not running</div>
-                <div class="status-card-networks" id="ysfGatewayNetworks">
-                    <div class="network-item">No networks</div>
+                
+                <!-- Feature Pills -->
+                <div class="feature-pills" id="ysfFeaturePills">
+                    <!-- Pills will be populated by JavaScript -->
+                </div>
+                
+                <!-- Connection Status -->
+                <div id="ysfConnections">
+                    <!-- Connection status will be populated by JavaScript -->
                 </div>
             </div>
             
@@ -562,8 +636,8 @@
             // Update DMR Gateway
             updateGatewayCard('dmrGateway', 'DMR Gateway', gateways.dmr || {});
             
-            // Update YSF Gateway
-            updateGatewayCard('ysfGateway', 'YSF Gateway', gateways.ysf || {});
+            // Update YSF Gateway (special handling for features and connections)
+            updateYSFGatewayCard(gateways.ysf || {});
             
             // Update P25 Gateway
             updateGatewayCard('p25Gateway', 'P25 Gateway', gateways.p25 || {});
@@ -608,6 +682,74 @@
                 statusText.textContent = 'Not running';
                 networksDiv.innerHTML = '<div class="network-item">No networks</div>';
             }
+        }
+        
+        function updateYSFGatewayCard(gatewayData) {
+            const card = document.getElementById('ysfGatewayCard');
+            const indicator = card.querySelector('.status-indicator');
+            const statusText = card.querySelector('.status-card-status');
+            const featurePills = document.getElementById('ysfFeaturePills');
+            const connections = document.getElementById('ysfConnections');
+            
+            const isRunning = gatewayData.is_running || false;
+            const enabled = gatewayData.enabled || false;
+            const networks = gatewayData.networks || {};
+            
+            // Define all possible YSF features
+            const allFeatures = ['YSF', 'FCS', 'APRS', 'GPSD'];
+            
+            // Update card status
+            if (isRunning && enabled) {
+                card.className = 'status-card running';
+                indicator.className = 'status-indicator running';
+                statusText.textContent = 'Running';
+            } else if (isRunning) {
+                card.className = 'status-card warning';
+                indicator.className = 'status-indicator warning';
+                statusText.textContent = 'Running - Not configured';
+            } else {
+                card.className = 'status-card stopped';
+                indicator.className = 'status-indicator stopped';
+                statusText.textContent = 'Not running';
+            }
+            
+            // Update feature pills
+            featurePills.innerHTML = allFeatures.map(feature => {
+                const isEnabled = networks.hasOwnProperty(feature);
+                const pillClass = isEnabled ? 'enabled' : 'disabled';
+                return `<span class="feature-pill ${pillClass}">${feature}</span>`;
+            }).join('');
+            
+            // Update connections (reflector and MMDVM link status)
+            let connectionsHtml = '';
+            
+            // Check for YSF reflector connection
+            if (networks.YSF && typeof networks.YSF === 'string' && networks.YSF !== 'Enabled') {
+                // Connected to a specific reflector
+                const reflectorName = networks.YSF;
+                const isConnected = state.status.networks?.YSF || false;
+                connectionsHtml += `
+                    <div class="connection-status-item">
+                        <div class="connection-dot ${isConnected ? 'connected' : 'disconnected'}"></div>
+                        <span class="connection-label">Reflector:</span>
+                        <span class="connection-value">${reflectorName}</span>
+                    </div>
+                `;
+            }
+            
+            // Note: MMDVM connection status could be tracked separately if needed
+            // For now, if YSF is running and enabled, assume MMDVM connection is active
+            if (isRunning && enabled) {
+                connectionsHtml += `
+                    <div class="connection-status-item">
+                        <div class="connection-dot connected"></div>
+                        <span class="connection-label">MMDVM Link:</span>
+                        <span class="connection-value">Active</span>
+                    </div>
+                `;
+            }
+            
+            connections.innerHTML = connectionsHtml || '<div style="padding: 6px 0; color: #64748b; font-size: 12px;">No connections</div>';
         }
 
         function updateUI() {
