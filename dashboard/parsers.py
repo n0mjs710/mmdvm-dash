@@ -301,8 +301,11 @@ def get_parser(source: str):
         'mmdvmhost': MMDVMHostParser,
         'dmrgateway': DMRGatewayParser,
         'ysfgateway': YSFGatewayParser,
+        'p25gateway': YSFGatewayParser,  # Reuse YSF parser for now (similar format)
+        'nxdngateway': YSFGatewayParser,  # Reuse YSF parser for now (similar format)
     }
     parser_class = parsers.get(source.lower())
     if parser_class:
         return parser_class()
+    logger.warning(f"No parser available for source: {source}")
     return None

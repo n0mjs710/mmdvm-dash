@@ -25,6 +25,11 @@ class LogMonitor:
         self.parser = get_parser(parser_type)
         self.last_position = 0
         self.running = False
+        
+        if self.parser is None:
+            logger.warning(f"No parser available for {name} (type: {parser_type})")
+        else:
+            logger.debug(f"Initialized monitor {name} with parser type {parser_type}")
     
     async def start(self):
         """Start monitoring the log file"""
@@ -75,12 +80,16 @@ class LogMonitor:
                 if not line:
                     continue
                 
+                if self.parser is None:
+                    logger.debug(f"Skipping line from {self.name} - no parser available")
+                    continue
+                
                 try:
                     entry = self.parser.parse_line(line)
                     if entry:
                         await self.process_entry(entry)
                 except Exception as e:
-                    logger.debug(f"Error parsing line from {self.name}: {e}")
+                    logger.debug(f"Error parsing line from {self.name}: {e} | Line: {line[:100]}")
         
         except Exception as e:
             logger.error(f"Error reading {self.name}: {e}")

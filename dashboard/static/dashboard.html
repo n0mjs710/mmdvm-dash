@@ -144,21 +144,6 @@
             line-height: 1.6;
         }
         
-        .status-card-networks .network-item {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            padding: 4px 8px;
-        }
-        
-        .status-card-networks .network-dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: #10b981;
-            flex-shrink: 0;
-        }
-        
         .status-card-networks .protocol-section {
             margin-top: 8px;
             padding: 8px 8px 4px 8px;
@@ -176,7 +161,7 @@
             color: #94a3b8;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            margin-bottom: 4px;
+            margin-bottom: 8px;
             font-weight: 600;
             padding-left: 0;
         }
@@ -185,6 +170,46 @@
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 8px;
+        }
+        
+        /* Mode/Network Pills */
+        .mode-pill {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin: 2px;
+            transition: all 0.3s ease;
+        }
+        
+        .mode-pill.inactive {
+            background: #334155;
+            color: #64748b;
+        }
+        
+        .mode-pill.selected {
+            background: #1e40af;
+            color: #93c5fd;
+            box-shadow: 0 0 8px rgba(30, 64, 175, 0.5);
+        }
+        
+        .mode-pill.active {
+            background: #059669;
+            color: #d1fae5;
+            box-shadow: 0 0 12px rgba(5, 150, 105, 0.6);
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                box-shadow: 0 0 12px rgba(5, 150, 105, 0.6);
+            }
+            50% {
+                box-shadow: 0 0 20px rgba(5, 150, 105, 0.8);
+            }
         }
         
         .card { 
@@ -333,7 +358,9 @@
             transmissions: [],
             recentCalls: [],
             events: [],
-            config: {}
+            config: {},
+            currentMode: 'IDLE',
+            activeTransmissions: new Set()  // Track which modes have active transmissions
         };
 
         function connectWebSocket() {
@@ -378,7 +405,16 @@
                 state.recentCalls = data.recent_calls || [];
                 state.events = data.events || [];
                 
+                // Update active transmissions set
+                state.activeTransmissions.clear();
+                state.transmissions.forEach(tx => {
+                    if (tx.active && tx.mode) {
+                        state.activeTransmissions.add(tx.mode);
+                    }
+                });
+                
                 console.log('Updated state.status:', state.status);
+                console.log('Active transmissions:', Array.from(state.activeTransmissions));
                 updateUI();
             }
         }
@@ -408,6 +444,7 @@
                 
                 const modes = status.enabled_modes || [];
                 const networks = status.enabled_networks || [];
+                const currentMode = status.current_mode || 'IDLE';
                 
                 let html = '';
                 
@@ -418,9 +455,15 @@
                     if (modes.length > 0) {
                         html += '<div class="protocol-section">';
                         html += '<div class="protocol-label">RF Modes</div>';
-                        html += modes.map(mode => 
-                            `<div class="network-item"><span class="network-dot"></span>${mode}</div>`
-                        ).join('');
+                        html += modes.map(mode => {
+                            let pillClass = 'inactive';
+                            if (state.activeTransmissions.has(mode)) {
+                                pillClass = 'active';
+                            } else if (mode === currentMode) {
+                                pillClass = 'selected';
+                            }
+                            return `<span class="mode-pill ${pillClass}">${mode}</span>`;
+                        }).join('');
                         html += '</div>';
                     } else {
                         html += '<div class="protocol-section"></div>';
@@ -430,9 +473,9 @@
                     if (networks.length > 0) {
                         html += '<div class="protocol-section">';
                         html += '<div class="protocol-label">Networks</div>';
-                        html += networks.map(net => 
-                            `<div class="network-item"><span class="network-dot"></span>${net}</div>`
-                        ).join('');
+                        html += networks.map(net => {
+                            return `<span class="mode-pill inactive">${net}</span>`;
+                        }).join('');
                         html += '</div>';
                     } else {
                         html += '<div class="protocol-section"></div>';
@@ -440,7 +483,7 @@
                     
                     html += '</div>';
                 } else {
-                    html = '<div class="network-item">No modes detected</div>';
+                    html = '<div style="color: #64748b; padding: 8px;">No modes detected</div>';
                 }
                 
                 mmdvmNetworks.innerHTML = html;

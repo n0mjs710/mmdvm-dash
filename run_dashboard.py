@@ -66,8 +66,19 @@ async def start_monitors():
                 latest_log = sorted(matching_files)[-1]
                 source_name = log_pattern.stem.split('-')[0]  # e.g., "MMDVM" from "MMDVM-*.log"
                 
-                logger.info(f"Monitoring {latest_log} as {source_name}")
-                monitor_manager.add_monitor(source_name, latest_log, source_name)
+                # Map log file names to parser types
+                parser_map = {
+                    'MMDVM': 'mmdvmhost',
+                    'mmdvm': 'mmdvmhost',
+                    'DMRGateway': 'dmrgateway',
+                    'YSFGateway': 'ysfgateway',
+                    'P25Gateway': 'p25gateway',
+                    'NXDNGateway': 'nxdngateway'
+                }
+                parser_type = parser_map.get(source_name, source_name.lower())
+                
+                logger.info(f"Monitoring {latest_log} as {source_name} (parser: {parser_type})")
+                monitor_manager.add_monitor(source_name, latest_log, parser_type)
             else:
                 logger.warning(f"No log files found matching {log_pattern}")
         else:
