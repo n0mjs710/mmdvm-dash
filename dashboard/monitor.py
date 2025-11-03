@@ -114,6 +114,28 @@ class LogMonitor:
         elif event_type == 'network_disconnected':
             state.update_network_status(entry.data['network'], False)
         
+        # YSF Gateway events
+        elif event_type == 'ysf_linked':
+            # YSF linked to a reflector
+            reflector = entry.data.get('reflector', 'Unknown')
+            state.update_network_status('YSF', True, reflector)
+            logger.info(f"YSF linked to reflector: {reflector}")
+        
+        elif event_type == 'ysf_reconnected':
+            # YSF reconnected to reflector
+            reflector = entry.data.get('reflector', 'Unknown')
+            state.update_network_status('YSF', True, reflector)
+            logger.info(f"YSF reconnected to reflector: {reflector}")
+        
+        elif event_type == 'ysf_mmdvm_connected':
+            # YSFGateway successfully connected to MMDVMHost
+            logger.info("YSF Gateway connected to MMDVM")
+        
+        elif event_type == 'ysf_disconnect_requested':
+            # YSF disconnecting from reflector
+            state.update_network_status('YSF', False)
+            logger.info("YSF disconnect requested")
+        
         elif event_type in ['dmr_rx', 'dstar_rx', 'ysf_rx', 'p25_rx', 'nxdn_rx', 'fm_rx']:
             # Create transmission record
             transmission = Transmission(

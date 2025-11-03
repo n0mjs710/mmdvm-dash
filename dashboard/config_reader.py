@@ -263,37 +263,51 @@ class YSFGatewayConfig(GatewayConfig):
     
     def _parse_settings(self):
         """Parse YSF Gateway specific settings"""
-        # YSFGateway is operational if config exists
-        # Check [YSF Network] for Enable flag and [Network] for startup
+        # YSFGateway can have multiple enabled networks/features
         
+        # Check [YSF Network] - main System Fusion network
         if self.config.has_section('YSF Network'):
             enabled = (self.config.getboolean('YSF Network', 'Enable', fallback=False) or
                       self.config.getboolean('YSF Network', 'Enabled', fallback=False))
             if enabled:
                 self.enabled = True
-                # Get startup network from [Network] section
+                # Get startup reflector from [Network] section
                 if self.config.has_section('Network'):
-                    startup = self.config.get('Network', 'Startup', fallback='')
-                    if startup:
-                        logger.info(f"YSFGateway: Enabled with startup reflector '{startup}'")
-                        self.networks['Reflector'] = startup
+                    startup = self.config.get('Network', 'Startup', fallback='').strip()
+                    if startup and not startup.startswith('#'):
+                        logger.info(f"YSFGateway: YSF Network enabled with startup reflector '{startup}'")
+                        self.networks['YSF'] = startup
                     else:
-                        logger.info("YSFGateway: Enabled, no startup reflector")
-                        self.networks['YSF Network'] = 'Enabled'
+                        logger.info("YSFGateway: YSF Network enabled, no startup reflector")
+                        self.networks['YSF'] = 'Enabled'
                 else:
-                    logger.info("YSFGateway: Enabled")
-                    self.networks['YSF Network'] = 'Enabled'
+                    logger.info("YSFGateway: YSF Network enabled")
+                    self.networks['YSF'] = 'Enabled'
             else:
                 logger.debug("YSFGateway: YSF Network not enabled")
         
-        # Also check FCS Network
+        # Check [FCS Network] - FCS (FreeStar) network
         if self.config.has_section('FCS Network'):
             enabled = (self.config.getboolean('FCS Network', 'Enable', fallback=False) or
                       self.config.getboolean('FCS Network', 'Enabled', fallback=False))
             if enabled:
                 self.enabled = True
                 logger.info("YSFGateway: FCS Network enabled")
-                self.networks['FCS Network'] = 'Enabled'
+                self.networks['FCS'] = 'Enabled'
+        
+        # Check [APRS] - sends GPS data to aprs.fi
+        if self.config.has_section('APRS'):
+            enabled = self.config.getboolean('APRS', 'Enable', fallback=False)
+            if enabled:
+                logger.info("YSFGateway: APRS enabled (GPS tracking to aprs.fi)")
+                self.networks['APRS'] = 'Enabled'
+        
+        # Check [GPSD] - GPS daemon for location data
+        if self.config.has_section('GPSD'):
+            enabled = self.config.getboolean('GPSD', 'Enable', fallback=False)
+            if enabled:
+                logger.info("YSFGateway: GPSD enabled (GPS location)")
+                self.networks['GPSD'] = 'Enabled'
 
 
 class P25GatewayConfig(GatewayConfig):

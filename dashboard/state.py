@@ -92,20 +92,32 @@ class DashboardState:
         self.add_event(event)
         logger.info(f"Mode changed: {old_mode} -> {mode}")
     
-    def update_network_status(self, network: str, connected: bool):
-        """Update network connection status"""
+    def update_network_status(self, network: str, connected: bool, target: str = None):
+        """Update network connection status
+        
+        Args:
+            network: Network name (e.g., 'YSF', 'DMR', 'P25')
+            connected: Whether the network is connected
+            target: Optional target/reflector name (e.g., 'Kansas' for YSF reflector)
+        """
         self.status.networks[network] = connected
         self.status.last_update = datetime.now().timestamp()
+        
+        # Build message with target if provided
+        if target and connected:
+            message = f'{network} connected to {target}'
+        else:
+            message = f'{network} {"connected" if connected else "disconnected"}'
         
         event = Event(
             timestamp=self.status.last_update,
             event_type='network_status',
             source='network',
-            message=f'{network} {"connected" if connected else "disconnected"}',
-            data={'network': network, 'connected': connected}
+            message=message,
+            data={'network': network, 'connected': connected, 'target': target}
         )
         self.add_event(event)
-        logger.info(f"Network {network}: {'connected' if connected else 'disconnected'}")
+        logger.info(message)
     
     def add_transmission(self, transmission: Transmission):
         """Add or update a transmission"""

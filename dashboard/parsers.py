@@ -326,7 +326,12 @@ class YSFGatewayParser:
     """Parser for YSFGateway log files"""
     
     TIMESTAMP_PATTERN = r'([MDISEWF]):\s+(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\.\d{3})\s+(.*)'
-    REFLECTOR_PATTERN = r'Connect to (.+) has been requested'
+    
+    # Key YSF events to track
+    LINKED_PATTERN = r'Linked to (.+?)(?:\s+)?$'  # "Linked to Kansas          "
+    LINK_MMDVM_PATTERN = r'Link successful to MMDVM'
+    RECONNECT_PATTERN = r'Automatic \(re-\)connection to (\d+) - "(.+?)"'  # Reconnecting to reflector
+    REFLECTOR_PATTERN = r'Connect to (.+) has been requested'  # Manual connection request
     DISCONNECT_PATTERN = r'Disconnect has been requested'
     
     def parse_line(self, line: str) -> Optional[LogEntry]:
@@ -346,15 +351,41 @@ class YSFGatewayParser:
         
         entry = LogEntry(timestamp, level, message, 'ysfgateway')
         
-        if match := re.search(self.REFLECTOR_PATTERN, message):
+        # Check for linked to reflector
+        if match := re.search(self.LINKED_PATTERN, message):
+            reflector = match.group(1).strip()
             entry.data = {
-                'event': 'reflector_connect',
-                'reflector': match.group(1)
+                'event': 'ysf_linked',
+                'reflector': reflector
             }
         
+        # Check for link to MMDVM successful
+        elif re.search(self.LINK_MMDVM_PATTERN, message):
+            entry.data = {
+                'event': 'ysf_mmdvm_connected'
+            }
+        
+        # Check for automatic reconnection
+        elif match := re.search(self.RECONNECT_PATTERN, message):
+            reflector_id = match.group(1)
+            reflector_name = match.group(2).strip()
+            entry.data = {
+                'event': 'ysf_reconnected',
+                'reflector_id': reflector_id,
+                'reflector': reflector_name
+            }
+        
+        # Manual connection request
+        elif match := re.search(self.REFLECTOR_PATTERN, message):
+            entry.data = {
+                'event': 'ysf_connect_requested',
+                'reflector': match.group(1).strip()
+            }
+        
+        # Disconnect request
         elif re.search(self.DISCONNECT_PATTERN, message):
             entry.data = {
-                'event': 'reflector_disconnect'
+                'event': 'ysf_disconnect_requested'
             }
         
         return entry
