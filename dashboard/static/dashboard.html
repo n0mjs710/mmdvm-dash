@@ -148,7 +148,7 @@
             display: flex;
             align-items: center;
             gap: 6px;
-            padding: 4px 0;
+            padding: 4px 8px;
         }
         
         .status-card-networks .network-dot {
@@ -156,11 +156,12 @@
             height: 6px;
             border-radius: 50%;
             background: #10b981;
+            flex-shrink: 0;
         }
         
         .status-card-networks .protocol-section {
             margin-top: 8px;
-            padding-top: 8px;
+            padding: 8px 8px 4px 8px;
             border-top: 1px solid #334155;
         }
         
@@ -177,6 +178,7 @@
             letter-spacing: 0.5px;
             margin-bottom: 4px;
             font-weight: 600;
+            padding-left: 0;
         }
         
         .card { 
@@ -196,93 +198,42 @@
             font-weight: 600;
         }
         
-        .transmission {
-            background: #334155;
-            padding: 12px;
+        /* Log Viewer */
+        .log-viewer {
+            background: #0f172a;
             border-radius: 6px;
-            margin-bottom: 8px;
-            border-left: 4px solid #10b981;
-            display: grid;
-            grid-template-columns: 100px 1fr 150px 100px 80px;
-            gap: 12px;
-            align-items: center;
-        }
-        
-        .transmission.active {
-            border-left-color: #ef4444;
-            animation: pulse 2s ease-in-out infinite;
-        }
-        
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
-        }
-        
-        .transmission .mode {
-            background: #6366f1;
-            color: white;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 11px;
-            font-weight: 600;
-            text-align: center;
-        }
-        
-        .transmission .callsign {
-            font-weight: 600;
-            font-size: 16px;
-            color: #38bdf8;
-        }
-        
-        .transmission .destination {
+            padding: 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.6;
+            max-height: 400px;
+            overflow-y: auto;
             color: #94a3b8;
         }
         
-        .transmission .time {
-            color: #64748b;
-            font-size: 12px;
+        .log-line {
+            padding: 2px 0;
+            white-space: pre-wrap;
+            word-break: break-all;
         }
         
-        .event { 
-            padding: 10px; 
-            border-left: 3px solid #3b82f6; 
-            margin-bottom: 8px; 
-            background: #334155; 
-            border-radius: 4px; 
-            font-size: 13px;
-            display: flex;
-            gap: 12px;
-            align-items: center;
+        .log-viewer::-webkit-scrollbar {
+            width: 8px;
         }
         
-        .event .time { 
-            color: #64748b; 
-            font-size: 11px;
-            min-width: 80px;
-        }
-        
-        .event .type {
-            background: #475569;
-            padding: 2px 8px;
+        .log-viewer::-webkit-scrollbar-track {
+            background: #1e293b;
             border-radius: 4px;
-            font-size: 10px;
-            font-weight: 600;
-            text-transform: uppercase;
-            min-width: 100px;
-            text-align: center;
         }
         
-        .event.mode_change { border-left-color: #8b5cf6; }
-        .event.mode_change .type { background: #8b5cf6; color: white; }
+        .log-viewer::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 4px;
+        }
         
-        .event.network_status { border-left-color: #10b981; }
-        .event.network_status .type { background: #10b981; color: white; }
-        
-        .event.transmission_start { border-left-color: #ef4444; }
-        .event.transmission_start .type { background: #ef4444; color: white; }
-        
-        .event.transmission_end { border-left-color: #64748b; }
-        .event.transmission_end .type { background: #64748b; color: white; }
+        .log-viewer::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
         
         .empty-state {
             text-align: center;
@@ -291,53 +242,8 @@
             font-style: italic;
         }
         
-        .grid-2 {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-            gap: 20px;
-        }
-        
-        .network-list {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-        
-        .network-item {
-            background: #334155;
-            padding: 12px;
-            border-radius: 6px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .network-name {
-            font-weight: 600;
-        }
-        
-        .network-status {
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-        
-        .network-status.online { background: #10b981; color: white; }
-        .network-status.offline { background: #ef4444; color: white; }
-        
         @media (max-width: 768px) {
-            .transmission {
-                grid-template-columns: 1fr;
-                gap: 8px;
-            }
-            
-            .stats-bar {
-                grid-template-columns: 1fr;
-            }
-            
-            .grid-2 {
+            .system-status-grid {
                 grid-template-columns: 1fr;
             }
         }
@@ -403,56 +309,11 @@
             </div>
         </div>
 
-        <!-- Statistics -->
-        <div class="stats-bar">
-            <div class="stat-card">
-                <div class="stat-label">Total Calls Today</div>
-                <div class="stat-value" id="statTotalCalls">0</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Active Transmissions</div>
-                <div class="stat-value" id="statActiveTransmissions">0</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Active Users</div>
-                <div class="stat-value" id="statActiveUsers">0</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Connected Networks</div>
-                <div class="stat-value" id="statNetworks">0</div>
-            </div>
-        </div>
-
-        <!-- Active Transmissions -->
+        <!-- Live Log Viewer -->
         <div class="card">
-            <h2>Active Transmissions</h2>
-            <div id="activeTransmissions">
-                <div class="empty-state">No active transmissions</div>
-            </div>
-        </div>
-
-        <!-- Recent Calls & Events -->
-        <div class="grid-2">
-            <div class="card">
-                <h2>Recent Calls</h2>
-                <div id="recentCalls">
-                    <div class="empty-state">No recent calls</div>
-                </div>
-            </div>
-            
-            <div class="card">
-                <h2>Recent Events</h2>
-                <div id="recentEvents">
-                    <div class="empty-state">No events yet</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Network Status -->
-        <div class="card">
-            <h2>Network Status</h2>
-            <div id="networkStatus" class="network-list">
-                <div class="empty-state">No networks configured</div>
+            <h2>Live Log Viewer</h2>
+            <div class="log-viewer" id="logViewer">
+                <div class="log-line">Waiting for log data...</div>
             </div>
         </div>
     </div>
@@ -622,98 +483,9 @@
             
             // Update mode
             document.getElementById('currentMode').textContent = state.status.current_mode || 'IDLE';
-            
-            // Update statistics
-            document.getElementById('statTotalCalls').textContent = 
-                (state.status.total_calls_today || 0).toLocaleString();
-            document.getElementById('statActiveTransmissions').textContent = 
-                state.transmissions.length;
-            document.getElementById('statActiveUsers').textContent = 
-                state.status.active_users || 0;
-            
-            const networks = state.status.networks || {};
-            const connectedNetworks = Object.values(networks).filter(v => v).length;
-            document.getElementById('statNetworks').textContent = connectedNetworks;
-            
-            // Update active transmissions
-            updateActiveTransmissions();
-            
-            // Update recent calls
-            updateRecentCalls();
-            
-            // Update events
-            updateEvents();
-            
-            // Update network status
-            updateNetworkStatus();
         }
 
-        function updateActiveTransmissions() {
-            const container = document.getElementById('activeTransmissions');
-            
-            if (state.transmissions.length === 0) {
-                container.innerHTML = '<div class="empty-state">No active transmissions</div>';
-                return;
-            }
-            
-            container.innerHTML = state.transmissions.map(tx => {
-                const time = new Date(tx.timestamp * 1000).toLocaleTimeString();
-                const duration = tx.duration > 0 ? `${tx.duration.toFixed(1)}s` : 'In progress';
-                
-                return `
-                    <div class="transmission active">
-                        <div class="mode">${tx.mode}</div>
-                        <div>
-                            <div class="callsign">${tx.source}</div>
-                            <div class="destination">→ ${tx.destination}${tx.slot > 0 ? ` (Slot ${tx.slot})` : ''}</div>
-                        </div>
-                        <div>${duration}</div>
-                        <div class="time">${time}</div>
-                        <div>🔴 LIVE</div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        function updateRecentCalls() {
-            const container = document.getElementById('recentCalls');
-            
-            if (state.recentCalls.length === 0) {
-                container.innerHTML = '<div class="empty-state">No recent calls</div>';
-                return;
-            }
-            
-            container.innerHTML = state.recentCalls.map(call => {
-                const time = new Date(call.timestamp * 1000).toLocaleTimeString();
-                const duration = call.duration > 0 ? `${call.duration.toFixed(1)}s` : '';
-                
-                return `
-                    <div class="transmission">
-                        <div class="mode">${call.mode}</div>
-                        <div>
-                            <div class="callsign">${call.source}</div>
-                            <div class="destination">→ ${call.destination}${call.slot > 0 ? ` (Slot ${call.slot})` : ''}</div>
-                        </div>
-                        <div>${duration}</div>
-                        <div class="time">${time}</div>
-                        <div></div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        function updateEvents() {
-            const container = document.getElementById('recentEvents');
-            
-            if (state.events.length === 0) {
-                container.innerHTML = '<div class="empty-state">No events yet</div>';
-                return;
-            }
-            
-            container.innerHTML = state.events.map(event => {
-                const time = new Date(event.timestamp * 1000).toLocaleTimeString();
-                
-                return `
+        function updateWebSocketStatus(connected) {
                     <div class="event ${event.event_type}">
                         <div class="time">${time}</div>
                         <div class="type">${event.event_type.replace('_', ' ')}</div>
@@ -721,25 +493,6 @@
                     </div>
                 `;
             }).join('');
-        }
-
-        function updateNetworkStatus() {
-            const container = document.getElementById('networkStatus');
-            const networks = state.status.networks || {};
-            
-            if (Object.keys(networks).length === 0) {
-                container.innerHTML = '<div class="empty-state">No networks configured</div>';
-                return;
-            }
-            
-            container.innerHTML = Object.entries(networks).map(([name, connected]) => `
-                <div class="network-item">
-                    <div class="network-name">${name}</div>
-                    <div class="network-status ${connected ? 'online' : 'offline'}">
-                        ${connected ? '✓ Online' : '✗ Offline'}
-                    </div>
-                </div>
-            `).join('');
         }
 
         function updateWebSocketStatus(connected) {
