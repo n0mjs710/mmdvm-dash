@@ -32,11 +32,25 @@
             margin-bottom: 12px;
         }
         
+        .header-left {
+            display: flex;
+            align-items: baseline;
+            gap: 12px;
+        }
+        
         .repeater-callsign {
             font-size: 36px;
             font-weight: 700;
             color: #38bdf8;
             letter-spacing: 2px;
+        }
+        
+        .system-name {
+            font-size: 18px;
+            font-weight: 500;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
         
         .header-info {
@@ -213,6 +227,13 @@
             transition: all 0.3s ease;
             text-align: center;
             width: 100%;
+            border: 2px solid transparent;
+        }
+        
+        .mode-pill.disabled {
+            background: transparent;
+            border-color: #334155;
+            color: #475569;
         }
         
         .mode-pill.inactive {
@@ -314,7 +335,10 @@
     <div class="container">
         <header>
             <div class="header-top">
-                <div class="repeater-callsign" id="repeaterCallsign">MMDVM</div>
+                <div class="header-left">
+                    <div class="repeater-callsign" id="repeaterCallsign">N0CALL</div>
+                    <div class="system-name">MMDVM</div>
+                </div>
                 <div class="status-badges">
                     <div class="mode-badge" id="currentMode">IDLE</div>
                     <div class="connection-status warning" id="wsStatus">Connecting...</div>
@@ -485,49 +509,44 @@
                 mmdvmIndicator.className = 'status-indicator running';
                 mmdvmStatus.textContent = 'Running';
                 
-                const modes = status.enabled_modes || [];
-                const networks = status.enabled_networks || [];
+                const enabledModes = status.enabled_modes || [];
+                const enabledNetworks = status.enabled_networks || [];
                 const currentMode = status.current_mode || 'IDLE';
                 
-                let html = '';
+                // All possible modes
+                const allModes = ['DMR', 'D-Star', 'YSF', 'P25', 'NXDN', 'POCSAG', 'FM'];
+                const allNetworks = ['DMR', 'YSF', 'P25', 'NXDN', 'D-Star', 'POCSAG', 'FM'];
                 
-                if (modes.length > 0 || networks.length > 0) {
-                    html += '<div class="protocol-grid">';
-                    
-                    // RF Modes column
-                    if (modes.length > 0) {
-                        html += '<div class="protocol-section">';
-                        html += '<div class="protocol-label">RF Modes</div>';
-                        html += modes.map(mode => {
-                            let pillClass = 'inactive';
-                            if (state.activeTransmissions.has(mode)) {
-                                pillClass = 'active';
-                            } else if (mode === currentMode) {
-                                pillClass = 'selected';
-                            }
-                            return `<span class="mode-pill ${pillClass}">${mode}</span>`;
-                        }).join('');
-                        html += '</div>';
-                    } else {
-                        html += '<div class="protocol-section"></div>';
+                let html = '<div class="protocol-grid">';
+                
+                // RF Modes column
+                html += '<div class="protocol-section">';
+                html += '<div class="protocol-label">RF Modes</div>';
+                html += allModes.map(mode => {
+                    let pillClass = 'disabled';
+                    if (enabledModes.includes(mode)) {
+                        if (state.activeTransmissions.has(mode)) {
+                            pillClass = 'active';
+                        } else if (mode === currentMode) {
+                            pillClass = 'selected';
+                        } else {
+                            pillClass = 'inactive';
+                        }
                     }
-                    
-                    // Networks column
-                    if (networks.length > 0) {
-                        html += '<div class="protocol-section">';
-                        html += '<div class="protocol-label">Networks</div>';
-                        html += networks.map(net => {
-                            return `<span class="mode-pill inactive">${net}</span>`;
-                        }).join('');
-                        html += '</div>';
-                    } else {
-                        html += '<div class="protocol-section"></div>';
-                    }
-                    
-                    html += '</div>';
-                } else {
-                    html = '<div style="color: #64748b; padding: 8px;">No modes detected</div>';
-                }
+                    return `<span class="mode-pill ${pillClass}">${mode}</span>`;
+                }).join('');
+                html += '</div>';
+                
+                // Networks column
+                html += '<div class="protocol-section">';
+                html += '<div class="protocol-label">Networks</div>';
+                html += allNetworks.map(net => {
+                    let pillClass = enabledNetworks.includes(net) ? 'inactive' : 'disabled';
+                    return `<span class="mode-pill ${pillClass}">${net}</span>`;
+                }).join('');
+                html += '</div>';
+                
+                html += '</div>';
                 
                 mmdvmNetworks.innerHTML = html;
             } else {
@@ -609,15 +628,26 @@
                 document.getElementById('repeaterCallsign').textContent = info.callsign;
             }
             
+            // Helper function to format frequency from Hz to MHz
+            function formatFrequency(freqHz) {
+                if (!freqHz) return null;
+                // Convert Hz to MHz and format to 4 decimal places (nearest 100 Hz)
+                const freqMHz = parseFloat(freqHz) / 1000000;
+                return freqMHz.toFixed(4);
+            }
+            
             // Frequency (show TX or RX if available)
             let frequency = '---';
-            if (info.tx_frequency) {
-                frequency = `${info.tx_frequency} MHz`;
-                if (info.rx_frequency && info.rx_frequency !== info.tx_frequency) {
-                    frequency += ` / ${info.rx_frequency} MHz`;
+            const txFreq = formatFrequency(info.tx_frequency);
+            const rxFreq = formatFrequency(info.rx_frequency);
+            
+            if (txFreq) {
+                frequency = `${txFreq} MHz`;
+                if (rxFreq && rxFreq !== txFreq) {
+                    frequency += ` / ${rxFreq} MHz`;
                 }
-            } else if (info.rx_frequency) {
-                frequency = `${info.rx_frequency} MHz`;
+            } else if (rxFreq) {
+                frequency = `${rxFreq} MHz`;
             }
             document.getElementById('repeaterFrequency').textContent = frequency;
             
