@@ -54,7 +54,7 @@ class MMDVMConfig:
         self.enabled_modes: Set[str] = set()
         self.enabled_networks: Set[str] = set()
         self.log_settings = {}
-        self.is_running = is_process_running('MMDVMHost')
+        self.is_running = is_process_running('mmdvmhost')
         
         if self.config_path.exists():
             self._load_config()
@@ -213,7 +213,7 @@ class DMRGatewayConfig(GatewayConfig):
     """Parse DMRGateway.ini configuration"""
     
     def __init__(self, config_path: str = "/etc/DMRGateway.ini"):
-        super().__init__(config_path, 'DMRGateway')
+        super().__init__(config_path, 'dmrgateway')
     
     def _parse_settings(self):
         """Parse DMR Gateway specific settings"""
@@ -247,7 +247,7 @@ class YSFGatewayConfig(GatewayConfig):
     """Parse YSFGateway.ini configuration"""
     
     def __init__(self, config_path: str = "/etc/YSFGateway.ini"):
-        super().__init__(config_path, 'YSFGateway')
+        super().__init__(config_path, 'ysfgateway')
     
     def _parse_settings(self):
         """Parse YSF Gateway specific settings"""
@@ -288,7 +288,7 @@ class P25GatewayConfig(GatewayConfig):
     """Parse P25Gateway.ini configuration"""
     
     def __init__(self, config_path: str = "/etc/P25Gateway.ini"):
-        super().__init__(config_path, 'P25Gateway')
+        super().__init__(config_path, 'p25gateway')
     
     def _parse_settings(self):
         """Parse P25 Gateway specific settings"""
@@ -316,7 +316,7 @@ class NXDNGatewayConfig(GatewayConfig):
     """Parse NXDNGateway.ini configuration"""
     
     def __init__(self, config_path: str = "/etc/NXDNGateway.ini"):
-        super().__init__(config_path, 'NXDNGateway')
+        super().__init__(config_path, 'nxdngateway')
     
     def _parse_settings(self):
         """Parse NXDN Gateway specific settings"""
