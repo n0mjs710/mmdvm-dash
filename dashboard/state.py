@@ -80,6 +80,9 @@ class DashboardState:
         # Debouncing for broadcasts
         self._broadcast_pending = False
         self._broadcast_task = None
+        
+        # Suppress broadcasts during initial log scanning
+        self.suppress_broadcasts = False
     
     def update_mode(self, mode: str):
         """Update current operating mode"""
@@ -232,6 +235,10 @@ class DashboardState:
     
     async def broadcast_status_update(self):
         """Broadcast status update to all connected WebSocket clients"""
+        # Skip if suppressed (during initial log scanning)
+        if self.suppress_broadcasts:
+            return
+            
         if not self.websocket_clients:
             logger.debug("No WebSocket clients connected, skipping broadcast")
             return

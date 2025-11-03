@@ -40,8 +40,10 @@ class LogMonitor:
         self.running = True
         logger.info(f"Starting monitor for {self.name}: {self.path}")
         
-        # Parse recent log entries to establish current state
+        # Parse recent log entries to establish current state (suppress broadcasts during scan)
+        state.suppress_broadcasts = True
         await self.parse_recent_entries(lookback_lines=1000)
+        state.suppress_broadcasts = False
         
         # Now seek to end of file to only read new entries going forward
         try:
