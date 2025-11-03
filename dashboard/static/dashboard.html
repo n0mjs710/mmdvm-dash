@@ -495,16 +495,6 @@
         }
 
         function updateWebSocketStatus(connected) {
-                    <div class="event ${event.event_type}">
-                        <div class="time">${time}</div>
-                        <div class="type">${event.event_type.replace('_', ' ')}</div>
-                        <div>${event.message}</div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        function updateWebSocketStatus(connected) {
             const el = document.getElementById('wsStatus');
             if (connected) {
                 el.textContent = '✓ Connected';
