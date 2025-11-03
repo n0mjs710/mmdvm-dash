@@ -315,9 +315,14 @@ class DashboardState:
     
     def get_status(self) -> Dict[str, Any]:
         """Get current system status"""
+        # Filter network keys to only include base network names (DMR, P25, YSF, etc.)
+        # Exclude gateway-specific keys like "DMR-MMDVM", "P25-MMDVM", "DMR-HBlink4"
+        base_networks = [net for net in self.status.networks.keys() 
+                        if '-' not in net]  # Only base names without hyphens
+        
         return {
             **self.status.to_dict(),
-            'enabled_networks': list(self.status.networks.keys()),  # List of network names
+            'enabled_networks': base_networks,  # List of base network names only
             'active_transmissions': len(self.active_transmissions),
             'total_calls_today': self.stats['total_calls_today'],
             'calls_by_mode': self.stats['calls_by_mode'],
