@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 def is_process_running(process_name: str) -> bool:
-    """Check if a process is running via systemd or process list"""
+    """Check if a process is running via systemd or process list (case-insensitive)"""
     # First try systemd
     try:
         result = subprocess.run(
@@ -29,10 +29,10 @@ def is_process_running(process_name: str) -> bool:
     except (subprocess.SubprocessError, FileNotFoundError):
         pass
     
-    # Fallback to checking process list
+    # Fallback to checking process list (case-insensitive)
     try:
         result = subprocess.run(
-            ['pgrep', '-f', process_name],
+            ['pgrep', '-i', '-f', process_name],
             capture_output=True,
             text=True,
             timeout=2

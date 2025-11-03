@@ -32,11 +32,11 @@ class Config:
                 "p25_gateway_ini": "/etc/P25Gateway.ini"
             },
             "process_names": {
-                "mmdvmhost": "MMDVMHost",
-                "dmrgateway": "DMRGateway",
-                "ysfgateway": "YSFGateway",
-                "p25gateway": "P25Gateway",
-                "nxdngateway": "NXDNGateway"
+                "mmdvmhost": "mmdvmhost",
+                "dmrgateway": "dmrgateway",
+                "ysfgateway": "ysfgateway",
+                "p25gateway": "p25gateway",
+                "nxdngateway": "nxdngateway"
             },
             "history": {
                 "enabled": True,
