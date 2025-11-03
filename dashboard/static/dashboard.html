@@ -695,61 +695,60 @@
             const enabled = gatewayData.enabled || false;
             const networks = gatewayData.networks || {};
             
-            // Define all possible YSF features
-            const allFeatures = ['YSF', 'FCS', 'APRS', 'GPSD'];
+            // Update card status - visual indicators (green border, green dots) show running state
+            // No need for redundant "Running" text
+            statusText.style.display = 'none';
             
-            // Update card status
             if (isRunning && enabled) {
                 card.className = 'status-card running';
                 indicator.className = 'status-indicator running';
-                statusText.textContent = 'Running';
             } else if (isRunning) {
                 card.className = 'status-card warning';
                 indicator.className = 'status-indicator warning';
-                statusText.textContent = 'Running - Not configured';
             } else {
                 card.className = 'status-card stopped';
                 indicator.className = 'status-indicator stopped';
-                statusText.textContent = 'Not running';
             }
             
-            // Update feature pills
-            featurePills.innerHTML = allFeatures.map(feature => {
+            // Build all pills: features + connections
+            let pillsHtml = '';
+            
+            // Feature pills (YSF, FCS, APRS, GPSD)
+            const allFeatures = ['YSF', 'FCS', 'APRS', 'GPSD'];
+            pillsHtml += allFeatures.map(feature => {
                 const isEnabled = networks.hasOwnProperty(feature);
                 const pillClass = isEnabled ? 'enabled' : 'disabled';
                 return `<span class="feature-pill ${pillClass}">${feature}</span>`;
             }).join('');
             
-            // Update connections (reflector and MMDVM link status)
-            let connectionsHtml = '';
-            
+            // Connection pills (Reflector, MMDVM)
             // Check for YSF reflector connection
+            let reflectorName = null;
             if (networks.YSF && typeof networks.YSF === 'string' && networks.YSF !== 'Enabled') {
-                // Connected to a specific reflector
-                const reflectorName = networks.YSF;
-                const isConnected = state.status.networks?.YSF || false;
-                connectionsHtml += `
-                    <div class="connection-status-item">
-                        <div class="connection-dot ${isConnected ? 'connected' : 'disconnected'}"></div>
-                        <span class="connection-label">Reflector:</span>
-                        <span class="connection-value">${reflectorName}</span>
+                reflectorName = networks.YSF;
+            }
+            const reflectorConnected = state.status.networks?.YSF || false;
+            const reflectorClass = reflectorConnected ? 'enabled' : 'disabled';
+            pillsHtml += `<span class="feature-pill ${reflectorClass}">Reflector</span>`;
+            
+            // MMDVM connection (assume active if running and enabled)
+            const mmdvmConnected = isRunning && enabled;
+            const mmdvmClass = mmdvmConnected ? 'enabled' : 'disabled';
+            pillsHtml += `<span class="feature-pill ${mmdvmClass}">MMDVM</span>`;
+            
+            featurePills.innerHTML = pillsHtml;
+            
+            // Show reflector name below pills if connected
+            let connectionsHtml = '';
+            if (reflectorName && reflectorConnected) {
+                connectionsHtml = `
+                    <div style="padding: 8px 0; color: #e2e8f0; font-size: 13px;">
+                        <span style="color: #94a3b8;">Connected to:</span> <span style="font-weight: 500;">${reflectorName}</span>
                     </div>
                 `;
             }
             
-            // Note: MMDVM connection status could be tracked separately if needed
-            // For now, if YSF is running and enabled, assume MMDVM connection is active
-            if (isRunning && enabled) {
-                connectionsHtml += `
-                    <div class="connection-status-item">
-                        <div class="connection-dot connected"></div>
-                        <span class="connection-label">MMDVM Link:</span>
-                        <span class="connection-value">Active</span>
-                    </div>
-                `;
-            }
-            
-            connections.innerHTML = connectionsHtml || '<div style="padding: 6px 0; color: #64748b; font-size: 12px;">No connections</div>';
+            connections.innerHTML = connectionsHtml;
         }
 
         function updateUI() {
