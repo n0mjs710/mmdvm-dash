@@ -218,7 +218,7 @@ class LogMonitor:
             # P25Gateway statically linked to a reflector
             reflector = entry.data.get('reflector', 'Unknown')
             state.update_network_status('P25', True, target=reflector)
-            logger.info(f"P25 Gateway linked to reflector: {reflector}")
+            logger.info(f"P25 Gateway linked to reflector: {reflector} (from log parsing)")
         
         elif event_type == 'p25_network_closing':
             # P25 network closing (reflector disconnecting)
