@@ -629,8 +629,8 @@
                 html += '<div class="protocol-label">Networks</div>';
                 html += allModes.map(net => {
                     let pillClass = 'disabled';
-                    // Check if RF mode is enabled (not network) - network follows RF mode
-                    if (enabledModes.includes(net)) {
+                    // Check if BOTH RF mode is enabled AND network is enabled for that mode
+                    if (enabledModes.includes(net) && enabledNetworks.includes(net)) {
                         // Match RF mode state exactly - MMDVMHost doesn't know about gateway connections
                         if (state.activeTransmissions.has(net)) {
                             pillClass = 'active';  // Green - transmitting
