@@ -264,13 +264,13 @@ class YSFGatewayConfig(GatewayConfig):
                     startup = self.config.get('Network', 'Startup', fallback='')
                     if startup:
                         logger.info(f"YSFGateway: Enabled with startup reflector '{startup}'")
-                        self.networks[startup] = True
+                        self.networks['Reflector'] = startup
                     else:
                         logger.info("YSFGateway: Enabled, no startup reflector")
-                        self.networks['YSFNetwork'] = True
+                        self.networks['YSF Network'] = 'Enabled'
                 else:
                     logger.info("YSFGateway: Enabled")
-                    self.networks['YSFNetwork'] = True
+                    self.networks['YSF Network'] = 'Enabled'
             else:
                 logger.debug("YSFGateway: YSF Network not enabled")
         
@@ -281,7 +281,7 @@ class YSFGatewayConfig(GatewayConfig):
             if enabled:
                 self.enabled = True
                 logger.info("YSFGateway: FCS Network enabled")
-                self.networks['FCS'] = True
+                self.networks['FCS Network'] = 'Enabled'
 
 
 class P25GatewayConfig(GatewayConfig):
@@ -304,10 +304,10 @@ class P25GatewayConfig(GatewayConfig):
                 self.enabled = True
                 if startup:
                     logger.info(f"P25Gateway: Operational with startup TG {startup}")
-                    self.networks[f"TG{startup}"] = True
+                    self.networks['Startup'] = f"TG {startup}"
                 if static and static != startup:
                     logger.info(f"P25Gateway: Also has static TG {static}")
-                    self.networks[f"TG{static}"] = True
+                    self.networks['Static'] = f"TG {static}"
             else:
                 logger.debug("P25Gateway: Network section exists but no TGs configured")
 

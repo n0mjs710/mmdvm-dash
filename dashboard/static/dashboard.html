@@ -158,6 +158,27 @@
             background: #10b981;
         }
         
+        .status-card-networks .protocol-section {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #334155;
+        }
+        
+        .status-card-networks .protocol-section:first-child {
+            margin-top: 0;
+            padding-top: 0;
+            border-top: none;
+        }
+        
+        .status-card-networks .protocol-label {
+            font-size: 11px;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+        
         .card { 
             background: #1e293b; 
             border-radius: 8px; 
@@ -327,7 +348,7 @@
         <header>
             <div>
                 <h1 id="dashboardTitle">MMDVM Dashboard</h1>
-                <div class="subtitle" id="dashboardDescription">Amateur Radio Digital Voice Monitor</div>
+                <div class="subtitle" id="dashboardDescription">Amateur Radio Multi-Mode Digital Voice Modem Monitor</div>
             </div>
             <div class="status-badges">
                 <div class="mode-badge" id="currentMode">IDLE</div>
@@ -497,7 +518,7 @@
             const status = state.status || {};
             const gateways = status.gateways || {};
             
-            // Update MMDVMHost
+            // Update MMDVMHost - show RF modes and Network modes
             const mmdvmRunning = status.mmdvm_running || false;
             const mmdvmCard = document.getElementById('mmdvmHostCard');
             const mmdvmIndicator = mmdvmCard.querySelector('.status-indicator');
@@ -510,13 +531,33 @@
                 mmdvmStatus.textContent = 'Running';
                 
                 const modes = status.enabled_modes || [];
+                const networks = status.enabled_networks || [];
+                
+                let html = '';
+                
                 if (modes.length > 0) {
-                    mmdvmNetworks.innerHTML = modes.map(mode => 
+                    html += '<div class="protocol-section">';
+                    html += '<div class="protocol-label">RF Modes</div>';
+                    html += modes.map(mode => 
                         `<div class="network-item"><span class="network-dot"></span>${mode}</div>`
                     ).join('');
-                } else {
-                    mmdvmNetworks.innerHTML = '<div class="network-item">No modes detected</div>';
+                    html += '</div>';
                 }
+                
+                if (networks.length > 0) {
+                    html += '<div class="protocol-section">';
+                    html += '<div class="protocol-label">Networks</div>';
+                    html += networks.map(net => 
+                        `<div class="network-item"><span class="network-dot"></span>${net}</div>`
+                    ).join('');
+                    html += '</div>';
+                }
+                
+                if (html === '') {
+                    html = '<div class="network-item">No modes detected</div>';
+                }
+                
+                mmdvmNetworks.innerHTML = html;
             } else {
                 mmdvmCard.className = 'status-card stopped';
                 mmdvmIndicator.className = 'status-indicator stopped';
@@ -550,10 +591,15 @@
                     // Running with networks
                     card.className = 'status-card running';
                     indicator.className = 'status-indicator running';
-                    statusText.textContent = 'Running';
-                    networksDiv.innerHTML = Object.keys(networks).map(net =>
-                        `<div class="network-item"><span class="network-dot"></span>${net}</div>`
-                    ).join('');
+                    statusText.textContent = `Running - ${networkCount} network${networkCount > 1 ? 's' : ''}`;
+                    
+                    // Show each network/reflector as a separate item
+                    networksDiv.innerHTML = Object.entries(networks).map(([net, value]) => {
+                        // For boolean values, just show the network name
+                        // For string values (like YSF reflector names or P25 TG numbers), show the value
+                        const displayName = (typeof value === 'string' && value !== 'true') ? value : net;
+                        return `<div class="network-item"><span class="network-dot"></span>${displayName}</div>`;
+                    }).join('');
                 } else {
                     // Running but no networks
                     card.className = 'status-card warning';
