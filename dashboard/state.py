@@ -216,12 +216,13 @@ class DashboardState:
         self.status.last_update = datetime.now().timestamp()
         logger.info(f"Updated expected state: MMDVMHost={self.status.mmdvm_running}, Networks={enabled_networks}, Gateways={list(self.status.gateways.keys())}")
         
-        # Schedule debounced broadcast instead of immediate
-        self.schedule_broadcast()
+        # Immediate broadcast for process status changes (critical updates)
+        asyncio.create_task(self.broadcast_status_update())
     
     async def broadcast_status_update(self):
         """Broadcast status update to all connected WebSocket clients"""
         if not self.websocket_clients:
+            logger.debug("No WebSocket clients connected, skipping broadcast")
             return
         
         status_data = self.get_status()
@@ -230,12 +231,15 @@ class DashboardState:
             'status': status_data
         }
         
+        logger.debug(f"Broadcasting status update to {len(self.websocket_clients)} clients")
+        
         # Send to all clients, removing disconnected ones
         disconnected = []
         for client in self.websocket_clients.copy():
             try:
                 await client.send_json(message)
-            except Exception:
+            except Exception as e:
+                logger.debug(f"Failed to send to client: {e}")
                 disconnected.append(client)
         
         # Remove disconnected clients
