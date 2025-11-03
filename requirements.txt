@@ -1,0 +1,18 @@
+# MMDVM Dashboard Requirements
+# Minimal dependencies for resource-constrained systems (NanoPi NEO 512MB RAM)
+
+# Web Framework - async, lightweight
+fastapi==0.109.0
+uvicorn==0.27.0
+
+# File monitoring - native Python watchdog
+watchdog==3.0.0
+
+# Async file I/O
+aiofiles==23.2.1
+
+# WebSocket support (included with uvicorn, but explicit for clarity)
+websockets==12.0
+
+# Note: No heavy dependencies like pandas, numpy, or complex parsers
+# All parsing done with stdlib re module for minimal memory footprint

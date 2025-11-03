@@ -1,0 +1,18 @@
+[Unit]
+Description=MMDVM Dashboard
+After=network.target mmdvmhost.service
+
+[Service]
+Type=simple
+User=mmdvm
+Group=mmdvm
+WorkingDirectory=/home/mmdvm/mmdvm-dash
+Environment="PATH=/home/mmdvm/mmdvm-dash/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+ExecStart=/home/mmdvm/mmdvm-dash/venv/bin/python /home/mmdvm/mmdvm-dash/run_dashboard.py
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

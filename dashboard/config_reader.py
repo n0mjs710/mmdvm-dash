@@ -1,0 +1,340 @@
+"""
+Configuration File Readers for MMDVM and Gateway Programs
+Reads INI files to understand expected system state
+"""
+import configparser
+from pathlib import Path
+from typing import Dict, List, Optional, Set
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+class MMDVMConfig:
+    """Parse and provide access to MMDVM.ini configuration"""
+    
+    def __init__(self, config_path: str = "/etc/MMDVM.ini"):
+        self.config_path = Path(config_path)
+        self.config = configparser.ConfigParser()
+        self.enabled_modes: Set[str] = set()
+        self.enabled_networks: Set[str] = set()
+        self.log_settings = {}
+        
+        if self.config_path.exists():
+            self._load_config()
+        else:
+            logger.warning(f"MMDVM.ini not found at {config_path}")
+    
+    def _load_config(self):
+        """Load and parse MMDVM.ini"""
+        try:
+            self.config.read(self.config_path)
+            self._parse_modes()
+            self._parse_networks()
+            self._parse_log_settings()
+            logger.info(f"Loaded MMDVM config: {len(self.enabled_modes)} modes, {len(self.enabled_networks)} networks")
+        except Exception as e:
+            logger.error(f"Error loading MMDVM.ini: {e}")
+    
+    def _parse_modes(self):
+        """Identify enabled digital/analog modes"""
+        mode_sections = {
+            'D-Star': 'D-Star',
+            'DMR': 'DMR',
+            'System Fusion': 'YSF',
+            'P25': 'P25',
+            'NXDN': 'NXDN',
+            'POCSAG': 'POCSAG',
+            'FM': 'FM'
+        }
+        
+        for section, mode in mode_sections.items():
+            if self.config.has_section(section):
+                enabled = self.config.getboolean(section, 'Enable', fallback=False)
+                if enabled:
+                    self.enabled_modes.add(mode)
+    
+    def _parse_networks(self):
+        """Identify enabled network connections"""
+        network_sections = {
+            'D-Star Network': 'D-Star',
+            'DMR Network': 'DMR',
+            'System Fusion Network': 'YSF',
+            'P25 Network': 'P25',
+            'NXDN Network': 'NXDN',
+            'POCSAG Network': 'POCSAG'
+        }
+        
+        for section, network in network_sections.items():
+            if self.config.has_section(section):
+                enabled = self.config.getboolean(section, 'Enable', fallback=False)
+                if enabled:
+                    self.enabled_networks.add(network)
+    
+    def _parse_log_settings(self):
+        """Extract log file configuration"""
+        if self.config.has_section('Log'):
+            self.log_settings = {
+                'file_path': self.config.get('Log', 'FilePath', fallback='/var/log/mmdvm'),
+                'file_root': self.config.get('Log', 'FileRoot', fallback='MMDVM'),
+                'file_level': self.config.getint('Log', 'FileLevel', fallback=1),
+                'display_level': self.config.getint('Log', 'DisplayLevel', fallback=1),
+                'file_rotate': self.config.getboolean('Log', 'FileRotate', fallback=True)
+            }
+    
+    def get_log_file_path(self) -> Optional[Path]:
+        """Get the full path to MMDVMHost log file"""
+        if self.log_settings:
+            path = Path(self.log_settings['file_path'])
+            root = self.log_settings['file_root']
+            
+            # MMDVMHost creates logs like: /var/log/mmdvm/MMDVM-2025-11-02.log
+            # We'll return the base pattern for monitoring
+            return path / f"{root}-*.log"
+        return None
+    
+    def get_modem_settings(self) -> Dict:
+        """Get modem configuration"""
+        if not self.config.has_section('Modem'):
+            return {}
+        
+        return {
+            'port': self.config.get('Modem', 'Port', fallback=''),
+            'protocol': self.config.get('Modem', 'Protocol', fallback='uart'),
+            'address': self.config.get('Modem', 'Address', fallback=''),
+            'rx_frequency': self.config.get('Modem', 'RXFrequency', fallback=''),
+            'tx_frequency': self.config.get('Modem', 'TXFrequency', fallback=''),
+            'power': self.config.get('Modem', 'TXPower', fallback=''),
+        }
+    
+    def get_info(self) -> Dict:
+        """Get station info"""
+        if not self.config.has_section('Info'):
+            return {}
+        
+        return {
+            'callsign': self.config.get('Info', 'Callsign', fallback=''),
+            'id': self.config.get('Info', 'Id', fallback=''),
+            'rx_frequency': self.config.get('Info', 'RXFrequency', fallback=''),
+            'tx_frequency': self.config.get('Info', 'TXFrequency', fallback=''),
+            'power': self.config.get('Info', 'Power', fallback=''),
+            'latitude': self.config.get('Info', 'Latitude', fallback=''),
+            'longitude': self.config.get('Info', 'Longitude', fallback=''),
+            'height': self.config.get('Info', 'Height', fallback=''),
+            'location': self.config.get('Info', 'Location', fallback=''),
+            'description': self.config.get('Info', 'Description', fallback=''),
+            'url': self.config.get('Info', 'URL', fallback='')
+        }
+
+
+class GatewayConfig:
+    """Base class for gateway configuration readers"""
+    
+    def __init__(self, config_path: str):
+        self.config_path = Path(config_path)
+        self.config = configparser.ConfigParser()
+        self.enabled = False
+        self.networks: Dict[str, bool] = {}
+        
+        if self.config_path.exists():
+            self._load_config()
+    
+    def _load_config(self):
+        """Load gateway config"""
+        try:
+            self.config.read(self.config_path)
+            self._parse_settings()
+        except Exception as e:
+            logger.error(f"Error loading {self.config_path}: {e}")
+    
+    def _parse_settings(self):
+        """Override in subclass"""
+        pass
+    
+    def get_log_file_path(self) -> Optional[Path]:
+        """Get log file path"""
+        if self.config.has_section('Log'):
+            path = self.config.get('Log', 'FilePath', fallback='/var/log/mmdvm')
+            root = self.config.get('Log', 'FileRoot', fallback='Gateway')
+            return Path(path) / f"{root}-*.log"
+        return None
+
+
+class DMRGatewayConfig(GatewayConfig):
+    """Parse DMRGateway.ini configuration"""
+    
+    def _parse_settings(self):
+        """Parse DMR Gateway specific settings"""
+        # DMRGateway can connect to multiple networks
+        network_sections = [
+            'DMR Network 1',
+            'DMR Network 2', 
+            'DMR Network 3',
+            'DMR Network 4',
+            'DMR Network 5'
+        ]
+        
+        for section in network_sections:
+            if self.config.has_section(section):
+                enabled = self.config.getboolean(section, 'Enabled', fallback=False)
+                if enabled:
+                    name = self.config.get(section, 'Name', fallback=section)
+                    self.networks[name] = True
+                    self.enabled = True
+
+
+class YSFGatewayConfig(GatewayConfig):
+    """Parse YSFGateway.ini configuration"""
+    
+    def _parse_settings(self):
+        """Parse YSF Gateway specific settings"""
+        if self.config.has_section('Network'):
+            self.enabled = self.config.getboolean('Network', 'Enable', fallback=False)
+            if self.enabled:
+                startup = self.config.get('Network', 'Startup', fallback='')
+                if startup:
+                    self.networks['Startup'] = startup
+
+
+class P25GatewayConfig(GatewayConfig):
+    """Parse P25Gateway.ini configuration"""
+    
+    def _parse_settings(self):
+        """Parse P25 Gateway specific settings"""
+        if self.config.has_section('Network'):
+            self.enabled = self.config.getboolean('Network', 'Enable', fallback=False)
+            if self.enabled:
+                host = self.config.get('Network', 'HostsFile', fallback='')
+                self.networks['P25Network'] = True
+
+
+class NXDNGatewayConfig(GatewayConfig):
+    """Parse NXDNGateway.ini configuration"""
+    
+    def _parse_settings(self):
+        """Parse NXDN Gateway specific settings"""
+        if self.config.has_section('Network'):
+            self.enabled = self.config.getboolean('Network', 'Enable', fallback=False)
+            if self.enabled:
+                self.networks['NXDNNetwork'] = True
+
+
+class ConfigManager:
+    """Manages all configuration files"""
+    
+    def __init__(self, 
+                 mmdvm_ini: str = "/etc/MMDVM.ini",
+                 dmr_gateway_ini: str = "/etc/DMRGateway.ini",
+                 ysf_gateway_ini: str = "/etc/YSFGateway.ini",
+                 p25_gateway_ini: str = "/etc/P25Gateway.ini",
+                 nxdn_gateway_ini: Optional[str] = None):
+        
+        self.mmdvm = MMDVMConfig(mmdvm_ini)
+        self.dmr_gateway = DMRGatewayConfig(dmr_gateway_ini)
+        self.ysf_gateway = YSFGatewayConfig(ysf_gateway_ini)
+        self.p25_gateway = P25GatewayConfig(p25_gateway_ini)
+        self.nxdn_gateway = NXDNGatewayConfig(nxdn_gateway_ini) if nxdn_gateway_ini else None
+    
+    def get_expected_state(self) -> Dict:
+        """Get the expected system state based on configuration files"""
+        return {
+            'enabled_modes': list(self.mmdvm.enabled_modes),
+            'enabled_networks': list(self.mmdvm.enabled_networks),
+            'gateways': {
+                'dmr': {
+                    'enabled': self.dmr_gateway.enabled,
+                    'networks': self.dmr_gateway.networks
+                },
+                'ysf': {
+                    'enabled': self.ysf_gateway.enabled,
+                    'networks': self.ysf_gateway.networks
+                },
+                'p25': {
+                    'enabled': self.p25_gateway.enabled,
+                    'networks': self.p25_gateway.networks
+                }
+            },
+            'modem': self.mmdvm.get_modem_settings(),
+            'info': self.mmdvm.get_info()
+        }
+        
+        # Add NXDN if configured
+        if self.nxdn_gateway:
+            return_dict = {
+                'enabled_modes': list(self.mmdvm.enabled_modes),
+                'enabled_networks': list(self.mmdvm.enabled_networks),
+                'gateways': {
+                    'dmr': {
+                        'enabled': self.dmr_gateway.enabled,
+                        'networks': self.dmr_gateway.networks
+                    },
+                    'ysf': {
+                        'enabled': self.ysf_gateway.enabled,
+                        'networks': self.ysf_gateway.networks
+                    },
+                    'p25': {
+                        'enabled': self.p25_gateway.enabled,
+                        'networks': self.p25_gateway.networks
+                    },
+                    'nxdn': {
+                        'enabled': self.nxdn_gateway.enabled,
+                        'networks': self.nxdn_gateway.networks
+                    }
+                },
+                'modem': self.mmdvm.get_modem_settings(),
+                'info': self.mmdvm.get_info()
+            }
+            return return_dict
+        
+        return {
+            'enabled_modes': list(self.mmdvm.enabled_modes),
+            'enabled_networks': list(self.mmdvm.enabled_networks),
+            'gateways': {
+                'dmr': {
+                    'enabled': self.dmr_gateway.enabled,
+                    'networks': self.dmr_gateway.networks
+                },
+                'ysf': {
+                    'enabled': self.ysf_gateway.enabled,
+                    'networks': self.ysf_gateway.networks
+                },
+                'p25': {
+                    'enabled': self.p25_gateway.enabled,
+                    'networks': self.p25_gateway.networks
+                }
+            },
+            'modem': self.mmdvm.get_modem_settings(),
+            'info': self.mmdvm.get_info()
+        }
+    
+    def get_all_log_paths(self) -> List[Path]:
+        """Get all log file paths to monitor"""
+        paths = []
+        
+        # MMDVMHost log
+        mmdvm_log = self.mmdvm.get_log_file_path()
+        if mmdvm_log:
+            paths.append(mmdvm_log)
+        
+        # Gateway logs
+        gateways = [self.dmr_gateway, self.ysf_gateway, self.p25_gateway]
+        if self.nxdn_gateway:
+            gateways.append(self.nxdn_gateway)
+            
+        for gateway in gateways:
+            if gateway and gateway.enabled:
+                log_path = gateway.get_log_file_path()
+                if log_path:
+                    paths.append(log_path)
+        
+        return paths
+
+
+# Global config manager instance
+config_manager = None
+
+def initialize_config_manager(**kwargs):
+    """Initialize the global config manager"""
+    global config_manager
+    config_manager = ConfigManager(**kwargs)
+    return config_manager

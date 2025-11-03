@@ -1,0 +1,48 @@
+{
+  "dashboard": {
+    "title": "MMDVM Dashboard",
+    "description": "Amateur Radio Digital Voice Monitor",
+    "host": "0.0.0.0",
+    "port": 8080,
+    "refresh_interval": 1000
+  },
+  
+  "config_paths": {
+    "mmdvm_ini": "/etc/MMDVM.ini",
+    "dmr_gateway_ini": "/etc/DMRGateway.ini",
+    "ysf_gateway_ini": "/etc/YSFGateway.ini",
+    "p25_gateway_ini": "/etc/P25Gateway.ini"
+  },
+  
+  "history": {
+    "enabled": true,
+    "scan_on_startup": true,
+    "days_back": 7,
+    "max_days_for_gateway_connections": 30
+  },
+  
+  "live_log": {
+    "enabled": true,
+    "max_lines": 500,
+    "update_interval_ms": 200
+  },
+  
+  "monitoring": {
+    "max_recent_transmissions": 50,
+    "max_events": 100,
+    "transmission_timeout_seconds": 300
+  },
+  
+  "display": {
+    "show_mode_icons": true,
+    "show_timestamps": true,
+    "compact_view": false,
+    "color_coded_logs": true
+  },
+  
+  "performance": {
+    "max_websocket_clients": 5,
+    "log_buffer_size": 8192,
+    "state_cleanup_interval": 3600
+  }
+}
