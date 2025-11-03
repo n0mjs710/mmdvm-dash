@@ -843,6 +843,14 @@
             const enabled = gatewayData.enabled || false;
             const networks = gatewayData.networks || {};
             
+            console.log('P25 Gateway Update:', {
+                isRunning,
+                enabled,
+                networks,
+                p25Network: state.status.networks?.P25,
+                allNetworks: state.status.networks
+            });
+            
             // Update card status
             if (isRunning && enabled) {
                 card.className = 'status-card running';
