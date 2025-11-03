@@ -481,6 +481,7 @@ def get_parser(source: str):
     """Get appropriate parser for a log source"""
     parsers = {
         'mmdvm': MMDVMHostParser,
+        'mmdvmhost': MMDVMHostParser,
         'dmrgateway': DMRGatewayParser,
         'ysfgateway': YSFGatewayParser,
         'p25gateway': P25GatewayParser,
