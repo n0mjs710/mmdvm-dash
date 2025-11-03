@@ -230,7 +230,10 @@ class DashboardState:
         status_data = self.get_status()
         message = {
             'type': 'state_update',  # Frontend expects 'state_update'
-            'status': status_data
+            'status': status_data,
+            'active_transmissions': self.get_active_transmissions(),
+            'recent_calls': self.get_recent_calls(10),
+            'events': self.get_events(20)
         }
         
         logger.debug(f"Broadcasting status update to {len(self.websocket_clients)} clients")
