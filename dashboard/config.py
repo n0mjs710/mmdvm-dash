@@ -38,32 +38,10 @@ class Config:
                 "p25gateway": "p25gateway",
                 "nxdngateway": "nxdngateway"
             },
-            "history": {
-                "enabled": True,
-                "scan_on_startup": True,
-                "days_back": 7,
-                "max_days_for_gateway_connections": 30
-            },
-            "live_log": {
-                "enabled": True,
-                "max_lines": 500,
-                "update_interval_ms": 200
-            },
             "monitoring": {
-                "max_recent_transmissions": 50,
+                "max_recent_calls": 50,
                 "max_events": 100,
-                "transmission_timeout_seconds": 300
-            },
-            "display": {
-                "show_mode_icons": True,
-                "show_timestamps": True,
-                "compact_view": False,
-                "color_coded_logs": True
-            },
-            "performance": {
-                "max_websocket_clients": 5,
-                "log_buffer_size": 8192,
-                "state_cleanup_interval": 3600
+                "log_buffer_size": 50
             }
         }
         
