@@ -123,7 +123,8 @@ if __name__ == "__main__":
         app,
         host=config.get('dashboard', 'host', default='0.0.0.0'),
         port=config.get('dashboard', 'port', default=8080),
-        log_level="info"
+        log_level="info",
+        access_log=False  # Disable HTTP access logs (GET /api/...)
     )
     server = uvicorn.Server(uvicorn_config)
     

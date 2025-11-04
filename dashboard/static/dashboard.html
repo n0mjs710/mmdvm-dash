@@ -1054,22 +1054,7 @@
             }
         }
 
-        // Load configuration
-        async function loadConfig() {
-            try {
-                const response = await fetch('/api/config');
-                const config = await response.json();
-                state.config = config;
-                
-                document.getElementById('dashboardTitle').textContent = config.title || 'MMDVM Dashboard';
-                document.getElementById('dashboardDescription').textContent = config.description || '';
-            } catch (error) {
-                console.error('Failed to load config:', error);
-            }
-        }
-
         // Initialize
-        loadConfig();
         connectWebSocket();
     </script>
 </body>

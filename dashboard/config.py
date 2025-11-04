@@ -19,11 +19,8 @@ class Config:
         """Load configuration from JSON file"""
         default_config = {
             "dashboard": {
-                "title": "MMDVM Dashboard",
-                "description": "Amateur Radio Digital Voice Monitor",
                 "host": "0.0.0.0",
-                "port": 8080,
-                "refresh_interval": 1000
+                "port": 8080
             },
             "config_paths": {
                 "mmdvm_ini": "/etc/MMDVM.ini",

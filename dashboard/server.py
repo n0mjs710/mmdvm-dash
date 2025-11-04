@@ -32,16 +32,6 @@ app.add_middleware(
 )
 
 # API Endpoints
-@app.get("/api/config")
-async def get_config():
-    """Get dashboard configuration"""
-    return {
-        "title": config.get('dashboard', 'title'),
-        "description": config.get('dashboard', 'description'),
-        "refresh_interval": config.get('dashboard', 'refresh_interval')
-    }
-
-
 @app.get("/api/status")
 async def get_status():
     """Get current system status"""
