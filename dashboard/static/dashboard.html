@@ -793,12 +793,12 @@
                 }).join('');
                 
                 // Connection pills (Reflector, MMDVM)
-                // Check for YSF reflector connection
+                // Check for YSF reflector connection from log parsing
                 let reflectorName = null;
-                if (networks.YSF && typeof networks.YSF === 'string' && networks.YSF !== 'Enabled') {
-                    reflectorName = networks.YSF;
+                if (state.status.networks?.['YSF-Reflector'] && typeof state.status.networks['YSF-Reflector'] === 'string') {
+                    reflectorName = state.status.networks['YSF-Reflector'];
                 }
-                const reflectorConnected = state.status.networks?.YSF || false;
+                const reflectorConnected = state.status.networks?.['YSF-Reflector'] || false;
                 const reflectorClass = reflectorConnected ? 'enabled' : 'disabled';
                 pillsHtml += `<span class="feature-pill ${reflectorClass}">Reflector</span>`;
                 
@@ -873,17 +873,18 @@
             let pillsHtml = '';
             
             if (isRunning && enabled) {
-                // P25 network pill (check if connected)
-                const p25Connected = state.status.networks?.P25 || false;
-                const p25Class = p25Connected ? 'enabled' : 'disabled';
+                // P25 mode pill (enabled in MMDVM.ini)
+                const p25ModeEnabled = state.status.networks?.P25 || false;
+                const p25Class = p25ModeEnabled ? 'enabled' : 'disabled';
                 pillsHtml += `<span class="feature-pill ${p25Class}">P25</span>`;
                 
-                // Reflector pill
+                // Reflector pill (from P25Gateway log parsing)
                 let reflectorName = null;
-                if (state.status.networks?.P25 && typeof state.status.networks.P25 === 'string') {
-                    reflectorName = state.status.networks.P25;
+                if (state.status.networks?.['P25-Reflector'] && typeof state.status.networks['P25-Reflector'] === 'string') {
+                    reflectorName = state.status.networks['P25-Reflector'];
                 }
-                const reflectorClass = p25Connected ? 'enabled' : 'disabled';
+                const reflectorConnected = state.status.networks?.['P25-Reflector'] || false;
+                const reflectorClass = reflectorConnected ? 'enabled' : 'disabled';
                 pillsHtml += `<span class="feature-pill ${reflectorClass}">Reflector</span>`;
                 
                 // MMDVM connection (tracked from log parsing)
@@ -895,7 +896,7 @@
                 
                 // Show reflector number if linked
                 let connectionsHtml = '';
-                if (reflectorName && p25Connected) {
+                if (reflectorName && reflectorConnected) {
                     connectionsHtml = `
                         <div style="padding: 8px 0; color: #e2e8f0; font-size: 13px;">
                             <span style="color: #94a3b8;">Linked to reflector:</span> <span style="font-weight: 500;">${reflectorName}</span>

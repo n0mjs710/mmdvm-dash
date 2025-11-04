@@ -196,12 +196,12 @@ class LogMonitor:
         
         elif event_type == 'p25_reflector_linked' and not state_to_find.get('p25_reflector'):
             reflector = entry.data.get('reflector', 'Unknown')
-            state.update_network_status('P25', True, target=reflector)
+            state.update_network_status('P25-Reflector', True, target=reflector)
             state_to_find['p25_reflector'] = True
             found_something = True
         
         elif event_type == 'p25_network_closing' and not state_to_find.get('p25_reflector'):
-            state.update_network_status('P25', False)
+            state.update_network_status('P25-Reflector', False)
             state_to_find['p25_reflector'] = True  # Found state (disconnected)
             found_something = True
         
@@ -212,12 +212,12 @@ class LogMonitor:
         
         elif event_type in ['ysf_linked', 'ysf_reconnected'] and not state_to_find.get('ysf_reflector'):
             reflector = entry.data.get('reflector', 'Unknown')
-            state.update_network_status('YSF', True, reflector)
+            state.update_network_status('YSF-Reflector', True, reflector)
             state_to_find['ysf_reflector'] = True
             found_something = True
         
         elif event_type == 'ysf_disconnect_requested' and not state_to_find.get('ysf_reflector'):
-            state.update_network_status('YSF', False)
+            state.update_network_status('YSF-Reflector', False)
             state_to_find['ysf_reflector'] = True  # Found state (disconnected)
             found_something = True
         
@@ -289,13 +289,13 @@ class LogMonitor:
         elif event_type == 'ysf_linked':
             # YSF linked to a reflector
             reflector = entry.data.get('reflector', 'Unknown')
-            state.update_network_status('YSF', True, reflector)
+            state.update_network_status('YSF-Reflector', True, reflector)
             log_fn(f"YSF linked to reflector: {reflector}")
         
         elif event_type == 'ysf_reconnected':
             # YSF reconnected to reflector
             reflector = entry.data.get('reflector', 'Unknown')
-            state.update_network_status('YSF', True, reflector)
+            state.update_network_status('YSF-Reflector', True, reflector)
             log_fn(f"YSF reconnected to reflector: {reflector}")
         
         elif event_type == 'ysf_mmdvm_connected':
@@ -305,12 +305,12 @@ class LogMonitor:
         
         elif event_type == 'ysf_disconnect_requested':
             # YSF disconnecting from reflector
-            state.update_network_status('YSF', False)
+            state.update_network_status('YSF-Reflector', False)
             log_fn("YSF disconnect requested")
         
         elif event_type == 'ysf_link_failed':
             # YSF connection to reflector lost (polls lost)
-            state.update_network_status('YSF', False)
+            state.update_network_status('YSF-Reflector', False)
             log_fn("YSF link failed (polls lost)")
         
         # P25 Gateway events
@@ -327,17 +327,17 @@ class LogMonitor:
         elif event_type == 'p25_reflector_linked':
             # P25Gateway statically linked to a reflector
             reflector = entry.data.get('reflector', 'Unknown')
-            state.update_network_status('P25', True, target=reflector)
+            state.update_network_status('P25-Reflector', True, target=reflector)
             log_fn(f"P25 Gateway linked to reflector: {reflector} (from log parsing)")
         
         elif event_type == 'p25_network_closing':
             # P25 network closing (reflector disconnecting)
-            state.update_network_status('P25', False)
+            state.update_network_status('P25-Reflector', False)
             log_fn("P25 network closing")
         
         elif event_type == 'p25_connection_lost':
             # P25 connection to reflector lost (recvfrom error)
-            state.update_network_status('P25', False)
+            state.update_network_status('P25-Reflector', False)
             log_fn("P25 connection lost (recvfrom error)")
         
         # DMR Gateway events

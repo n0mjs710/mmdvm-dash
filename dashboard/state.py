@@ -243,8 +243,16 @@ class DashboardState:
             changed = True
         
         # Store enabled networks from MMDVM config
+        # NOTE: Only store MMDVMHost network status here (DMR, P25, YSF, etc. from MMDVM.ini)
+        # Gateway-specific keys (YSF-Reflector, P25-Reflector, DMR-HBlink4, etc.) are ONLY
+        # updated from log parsing and should NEVER be overwritten by config.
         enabled_networks = expected_state.get('enabled_networks', [])
+        gateway_keys = {'YSF-Reflector', 'P25-Reflector', 'YSF-MMDVM', 'P25-MMDVM', 'DMR-MMDVM'}
+        
         for network in enabled_networks:
+            # Skip gateway-specific keys - these come from log parsing only
+            if network in gateway_keys or network.startswith('DMR-'):
+                continue
             # Only set to True if not already set to a specific target (reflector/TG)
             if network not in self.status.networks or self.status.networks[network] is False:
                 self.status.networks[network] = True  # Mark as configured
