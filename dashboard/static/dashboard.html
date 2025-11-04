@@ -728,7 +728,7 @@
             
             if (isRunning && enabled) {
                 // Build pills from config - networks contains actual enabled stanzas
-                // Each entry: {type: 'network'/'feature', section: section_name, 'status': 'unknown'}
+                // Each entry: {type: 'network'/'feature', section: section_name, 'status': 'unknown', enabled: true/false}
                 let pillsHtml = '';
                 
                 // Process all enabled stanzas from config
@@ -736,6 +736,13 @@
                     // Get the Name parameter if this is a network, otherwise use section name
                     // For DMR networks, the key is the network name (e.g., 'BrandMeister', 'HBlink')
                     let displayName = sectionName;
+                    
+                    // Check if this stanza is disabled in config
+                    if (!metadata.enabled) {
+                        // Disabled in config: always show outlined
+                        pillsHtml += `<span class="feature-pill disabled">${displayName}</span>`;
+                        return;
+                    }
                     
                     if (metadata.type === 'network') {
                         // Network stanzas: check log parsing for connection state
@@ -752,7 +759,7 @@
                         
                         pillsHtml += `<span class="feature-pill ${pillClass}">${displayName}</span>`;
                     } else {
-                        // Feature stanzas (like XLX, DExtra, DCS, etc.): always show as enabled if in config
+                        // Feature stanzas (like XLX, DExtra, DCS, etc.): always show as enabled if enabled in config
                         pillsHtml += `<span class="feature-pill enabled">${displayName}</span>`;
                     }
                 });
@@ -793,7 +800,7 @@
             
             if (isRunning && enabled) {
                 // Build pills from config - networks contains actual enabled stanzas
-                // Each entry: {type: 'network'/'feature', section: 'YSF Network', status: 'unknown'/'enabled'}
+                // Each entry: {type: 'network'/'feature', section: 'YSF Network', status: 'unknown'/'enabled', enabled: true/false}
                 let pillsHtml = '';
                 
                 // Process all enabled stanzas from config
@@ -801,6 +808,13 @@
                     // Extract display name from section name
                     // "YSF Network" -> "YSF", "FCS Network" -> "FCS", "APRS" -> "APRS"
                     let displayName = sectionName.replace(' Network', '');
+                    
+                    // Check if this stanza is disabled in config
+                    if (!metadata.enabled) {
+                        // Disabled in config: always show outlined
+                        pillsHtml += `<span class="feature-pill disabled">${displayName}</span>`;
+                        return;
+                    }
                     
                     if (metadata.type === 'network') {
                         // Network stanzas: check log parsing for connection state
@@ -817,7 +831,7 @@
                         
                         pillsHtml += `<span class="feature-pill ${pillClass}">${displayName}</span>`;
                     } else {
-                        // Feature stanzas: always show as enabled (dark blue filled) if in config
+                        // Feature stanzas: always show as enabled (dark blue filled) if enabled in config
                         pillsHtml += `<span class="feature-pill enabled">${displayName}</span>`;
                     }
                 });
@@ -887,6 +901,13 @@
                     // "Network" -> "P25 Network", "P25 Network" -> "P25 Network"
                     let displayName = sectionName === 'Network' ? 'P25 Network' : sectionName;
                     
+                    // Check if this stanza is disabled in config
+                    if (!metadata.enabled) {
+                        // Disabled in config: always show outlined
+                        pillsHtml += `<span class="feature-pill disabled">${displayName}</span>`;
+                        return;
+                    }
+                    
                     if (metadata.type === 'network') {
                         // Network stanzas: check log parsing for connection state
                         // Check state.status.networks['Network'] or ['P25-Reflector']
@@ -902,7 +923,7 @@
                         
                         pillsHtml += `<span class="feature-pill ${pillClass}">${displayName}</span>`;
                     } else {
-                        // Feature stanzas: always show as enabled (dark blue filled) if in config
+                        // Feature stanzas: always show as enabled (dark blue filled) if enabled in config
                         pillsHtml += `<span class="feature-pill enabled">${displayName}</span>`;
                     }
                 });

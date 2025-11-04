@@ -267,7 +267,7 @@ class DMRGatewayConfig(GatewayConfig):
         super().__init__(config_path, process_name)
     
     def _parse_settings(self):
-        """Parse DMR Gateway specific settings - scan ALL enabled stanzas"""
+        """Parse DMR Gateway specific settings - scan ALL stanzas with Enable parameter"""
         # Scan all sections for anything with an 'Enable' or 'Enabled' parameter
         for section in self.config.sections():
             # Check if this section has Enable/Enabled parameter
@@ -280,24 +280,32 @@ class DMRGatewayConfig(GatewayConfig):
             enabled = (self.config.getboolean(section, 'Enabled', fallback=False) or
                       self.config.getboolean(section, 'Enable', fallback=False))
             
-            if not enabled:
-                logger.debug(f"DMRGateway: {section} exists but not enabled")
-                continue
-            
-            # Section is enabled - determine if it's a network or not
+            # Store ALL sections with Enable parameter, whether enabled or disabled
+            # Determine if it's a network or not
             is_network = section.startswith('DMR Network')
             
             if is_network:
                 # Network sections use the 'Name' parameter for the pill label
                 name = self.config.get(section, 'Name', fallback=section)
-                logger.info(f"DMRGateway: Found enabled network '{name}' in section '{section}'")
-                self.networks[name] = {'type': 'network', 'section': section, 'status': 'unknown'}
+                logger.info(f"DMRGateway: Found network '{name}' in section '{section}' (enabled={enabled})")
+                self.networks[name] = {
+                    'type': 'network', 
+                    'section': section, 
+                    'status': 'disabled' if not enabled else 'unknown',
+                    'enabled': enabled
+                }
             else:
                 # Non-network sections use the section name as the pill label
-                logger.info(f"DMRGateway: Found enabled feature '{section}'")
-                self.networks[section] = {'type': 'feature', 'section': section, 'status': 'enabled'}
+                logger.info(f"DMRGateway: Found feature '{section}' (enabled={enabled})")
+                self.networks[section] = {
+                    'type': 'feature', 
+                    'section': section, 
+                    'status': 'disabled' if not enabled else 'enabled',
+                    'enabled': enabled
+                }
             
-            self.enabled = True  # Gateway has at least one enabled feature
+            if enabled:
+                self.enabled = True  # Gateway has at least one enabled feature
 
 
 class YSFGatewayConfig(GatewayConfig):
@@ -308,7 +316,7 @@ class YSFGatewayConfig(GatewayConfig):
         super().__init__(config_path, process_name)
     
     def _parse_settings(self):
-        """Parse YSF Gateway specific settings - scan ALL enabled stanzas"""
+        """Parse YSF Gateway specific settings - scan ALL stanzas with Enable parameter"""
         # Scan all sections for anything with an 'Enable' or 'Enabled' parameter
         for section in self.config.sections():
             # Check if this section has Enable/Enabled parameter
@@ -321,15 +329,12 @@ class YSFGatewayConfig(GatewayConfig):
             enabled = (self.config.getboolean(section, 'Enabled', fallback=False) or
                       self.config.getboolean(section, 'Enable', fallback=False))
             
-            if not enabled:
-                logger.debug(f"YSFGateway: {section} exists but not enabled")
-                continue
-            
+            # Store ALL sections with Enable parameter, whether enabled or disabled
             # Section is enabled - YSF Network and FCS Network are networks, others are features
             is_network = section in ['YSF Network', 'FCS Network']
             
             if is_network:
-                logger.info(f"YSFGateway: Found enabled network '{section}'")
+                logger.info(f"YSFGateway: Found network '{section}' (enabled={enabled})")
                 # For YSF Network, try to get startup reflector name
                 startup_reflector = None
                 if section == 'YSF Network' and self.config.has_section('Network'):
@@ -340,15 +345,22 @@ class YSFGatewayConfig(GatewayConfig):
                 self.networks[section] = {
                     'type': 'network', 
                     'section': section, 
-                    'status': 'unknown',
+                    'status': 'disabled' if not enabled else 'unknown',
+                    'enabled': enabled,
                     'startup_reflector': startup_reflector
                 }
             else:
                 # Non-network sections (APRS, GPSD, etc.) use section name as label
-                logger.info(f"YSFGateway: Found enabled feature '{section}'")
-                self.networks[section] = {'type': 'feature', 'section': section, 'status': 'enabled'}
+                logger.info(f"YSFGateway: Found feature '{section}' (enabled={enabled})")
+                self.networks[section] = {
+                    'type': 'feature', 
+                    'section': section, 
+                    'status': 'disabled' if not enabled else 'enabled',
+                    'enabled': enabled
+                }
             
-            self.enabled = True  # Gateway has at least one enabled feature
+            if enabled:
+                self.enabled = True  # Gateway has at least one enabled feature
 
 
 class P25GatewayConfig(GatewayConfig):
@@ -359,7 +371,7 @@ class P25GatewayConfig(GatewayConfig):
         super().__init__(config_path, process_name)
     
     def _parse_settings(self):
-        """Parse P25 Gateway specific settings - scan ALL enabled stanzas"""
+        """Parse P25 Gateway specific settings - scan ALL stanzas with Enable parameter"""
         # Scan all sections for anything with an 'Enable' or 'Enabled' parameter
         for section in self.config.sections():
             # Check if this section has Enable/Enabled parameter
@@ -372,15 +384,12 @@ class P25GatewayConfig(GatewayConfig):
             enabled = (self.config.getboolean(section, 'Enabled', fallback=False) or
                       self.config.getboolean(section, 'Enable', fallback=False))
             
-            if not enabled:
-                logger.debug(f"P25Gateway: {section} exists but not enabled")
-                continue
-            
+            # Store ALL sections with Enable parameter, whether enabled or disabled
             # Section is enabled - P25 Network is a network, others are features
             is_network = section in ['Network', 'P25 Network']
             
             if is_network:
-                logger.info(f"P25Gateway: Found enabled network '{section}'")
+                logger.info(f"P25Gateway: Found network '{section}' (enabled={enabled})")
                 # Try to get static reflector ID from Network section
                 reflector_id = None
                 if self.config.has_option(section, 'Static'):
@@ -389,15 +398,22 @@ class P25GatewayConfig(GatewayConfig):
                 self.networks[section] = {
                     'type': 'network', 
                     'section': section, 
-                    'status': 'unknown',  # Assume connected since we can't detect
+                    'status': 'disabled' if not enabled else 'unknown',
+                    'enabled': enabled,
                     'reflector_id': reflector_id
                 }
             else:
                 # Non-network sections use section name as label
-                logger.info(f"P25Gateway: Found enabled feature '{section}'")
-                self.networks[section] = {'type': 'feature', 'section': section, 'status': 'enabled'}
+                logger.info(f"P25Gateway: Found feature '{section}' (enabled={enabled})")
+                self.networks[section] = {
+                    'type': 'feature', 
+                    'section': section, 
+                    'status': 'disabled' if not enabled else 'enabled',
+                    'enabled': enabled
+                }
             
-            self.enabled = True  # Gateway has at least one enabled feature
+            if enabled:
+                self.enabled = True  # Gateway has at least one enabled feature
 
 
 class NXDNGatewayConfig(GatewayConfig):
