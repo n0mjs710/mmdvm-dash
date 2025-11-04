@@ -72,13 +72,17 @@ class LCDprocClient:
         self.server = await asyncio.start_server(
             self._handle_client,
             self.host,
-            self.port
+            self.port,
+            reuse_address=True
         )
         self.running = True
         
+        # Start serving
+        asyncio.create_task(self.server.serve_forever())
+        
         addr = self.server.sockets[0].getsockname()
         logger.info(f"LCDproc virtual display listening on {addr[0]}:{addr[1]}")
-        logger.info(f"Configure MMDVMHost MMDVM.ini [LCDproc] ServerAddress={addr[0]} ServerPort={addr[1]}")
+        logger.info(f"Configure MMDVMHost MMDVM.ini [LCDproc] Address={addr[0]} Port={addr[1]}")
     
     async def stop(self):
         """Stop the LCDproc server"""
