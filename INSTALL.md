@@ -2,7 +2,7 @@
 
 ## Requirements
 
-- Linux system with Python 3.13+
+- Linux system with Python 3.8+
 - MMDVMHost installed and configured
 - User `mmdvm` with read access to MMDVM log files
 
