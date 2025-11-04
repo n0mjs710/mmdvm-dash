@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.0] - 2025-11-04
 
+### Tested and Verified
+- ✅ DMR mode and DMRGateway (fully functional)
+- ✅ YSF mode and YSFGateway (fully functional with reflector support)
+- ✅ P25 mode and P25Gateway (fully functional with reflector support)
+- ✅ FM mode (tracking functional)
+
+### Implemented but Untested
+- ⚠️ D-Star mode (code present, not verified on live system)
+- ⚠️ NXDN mode and NXDNGateway (code present, not verified on live system)
+- ⚠️ POCSAG mode (code present, not verified on live system)
+
 ### Added
 - Real-time log monitoring for MMDVMHost and gateway programs
 - WebSocket-based live updates for system status
