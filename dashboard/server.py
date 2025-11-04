@@ -78,22 +78,6 @@ async def get_stats():
         "current_mode": status['current_mode']
     }
 
-
-@app.get("/api/lcd")
-async def get_lcd_display():
-    """
-    Get current LCD display state from LCDproc virtual display.
-    Returns the text lines that would appear on a physical LCD.
-    """
-    if state.lcd_client:
-        return state.lcd_client.get_state()
-    else:
-        return {
-            "enabled": False,
-            "message": "LCDproc virtual display not enabled"
-        }
-
-
 # WebSocket endpoint
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):

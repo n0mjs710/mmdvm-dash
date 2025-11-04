@@ -27,10 +27,6 @@ class SystemStatus:
     gateways: Dict[str, Dict[str, Any]] = field(default_factory=dict)
     info: Dict[str, Any] = field(default_factory=dict)  # Repeater info (callsign, location, etc)
     
-    # LCD Display state (from LCDproc)
-    lcd_display: List[str] = field(default_factory=list)  # 4 lines of text from virtual LCD
-    lcd_connected: bool = False  # Whether MMDVMHost is connected to LCDproc server
-    
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
 
@@ -90,9 +86,6 @@ class DashboardState:
         
         # Track last broadcast state to detect changes
         self._last_broadcast_hash = None
-        
-        # LCDproc client reference (set during startup if enabled)
-        self.lcd_client = None
     
     def update_mode(self, mode: str):
         """Update current operating mode"""
@@ -159,21 +152,6 @@ class DashboardState:
             logger.info(message)
         
         # Immediate broadcast for network changes (critical for responsive UI)
-        asyncio.create_task(self.broadcast_status_update())
-    
-    def update_lcd_display(self, lines: List[str], connected: bool = False):
-        """
-        Update LCD display state from LCDproc virtual display.
-        
-        Args:
-            lines: List of text lines (typically 4 lines for standard LCD)
-            connected: Whether MMDVMHost is connected to the LCDproc server
-        """
-        self.status.lcd_display = lines
-        self.status.lcd_connected = connected
-        self.status.last_update = datetime.now().timestamp()
-        
-        # Broadcast LCD updates (lightweight, happens frequently)
         asyncio.create_task(self.broadcast_status_update())
     
     def add_transmission(self, transmission: Transmission):
