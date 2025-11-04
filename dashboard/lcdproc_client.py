@@ -48,11 +48,11 @@ class LCDprocClient:
     from MMDVMHost, providing structured real-time data.
     """
     
-    def __init__(self, host: str = '127.0.0.1', port: int = 13666):
+    def __init__(self, host: str = '127.0.0.1', port: int = 13666, width: int = 20, height: int = 4):
         self.host = host
         self.port = port
-        self.width = 20  # Standard LCD width
-        self.height = 4  # Standard LCD height
+        self.width = width  # LCD width (characters)
+        self.height = height  # LCD height (lines)
         
         # State
         self.screens: Dict[str, LCDScreen] = {}

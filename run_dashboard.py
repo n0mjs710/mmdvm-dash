@@ -50,10 +50,12 @@ async def start_monitors():
     if lcd_enabled:
         lcd_host = config.get('lcdproc', 'host', default='127.0.0.1')
         lcd_port = config.get('lcdproc', 'port', default=13666)
+        lcd_width = config.get('lcdproc', 'width', default=20)
+        lcd_height = config.get('lcdproc', 'height', default=4)
         
         from dashboard.lcdproc_client import LCDprocClient
         
-        lcd_client = LCDprocClient(host=lcd_host, port=lcd_port)
+        lcd_client = LCDprocClient(host=lcd_host, port=lcd_port, width=lcd_width, height=lcd_height)
         
         # Set up callback to update state when display changes
         def on_lcd_update(lines, connected):
@@ -61,7 +63,7 @@ async def start_monitors():
         
         lcd_client.on_update = on_lcd_update
         await lcd_client.start()
-        logger.info(f"LCDproc virtual display started on {lcd_host}:{lcd_port}")
+        logger.info(f"LCDproc virtual display started on {lcd_host}:{lcd_port} ({lcd_width}x{lcd_height})")
         
         # Store reference for cleanup
         state.lcd_client = lcd_client

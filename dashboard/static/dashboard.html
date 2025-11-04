@@ -1061,8 +1061,9 @@
             }
             
             // Connected - show the LCD lines (even if empty/blank)
+            // Lines are already padded to correct width by backend
             lcdDisplay.innerHTML = lcdLines
-                .map(line => `<div class="lcd-line">${line.padEnd(20, ' ')}</div>`)
+                .map(line => `<div class="lcd-line">${line}</div>`)
                 .join('');
         }
 
