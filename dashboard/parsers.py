@@ -82,7 +82,7 @@ class MMDVMHostParser:
         """Extract structured data from message"""
         
         # Mode changes
-        if match := re.search(self.patterns['mode_change'], message):
+        if match := self.patterns['mode_change'].search(message):
             self.current_mode = match.group(1)
             entry.data = {
                 'event': 'mode_change',
@@ -90,7 +90,7 @@ class MMDVMHostParser:
             }
         
         # DMR transmissions
-        elif match := re.search(self.patterns['dmr_rx'], message):
+        elif match := self.patterns['dmr_rx'].search(message):
             entry.data = {
                 'event': 'dmr_rx',
                 'slot': int(match.group(1)),
@@ -100,7 +100,7 @@ class MMDVMHostParser:
                 'mode': 'DMR'
             }
         
-        elif match := re.search(self.patterns['dmr_end'], message):
+        elif match := self.patterns['dmr_end'].search(message):
             entry.data = {
                 'event': 'dmr_end',
                 'slot': int(match.group(1)),
@@ -111,7 +111,7 @@ class MMDVMHostParser:
             }
         
         # D-Star transmissions
-        elif match := re.search(self.patterns['dstar_rx'], message):
+        elif match := self.patterns['dstar_rx'].search(message):
             entry.data = {
                 'event': 'dstar_rx',
                 'source_callsign': match.group(1),
@@ -120,14 +120,14 @@ class MMDVMHostParser:
                 'mode': 'D-Star'
             }
         
-        elif match := re.search(self.patterns['dstar_end'], message):
+        elif match := self.patterns['dstar_end'].search(message):
             entry.data = {
                 'event': 'dstar_end',
                 'mode': 'D-Star'
             }
         
         # YSF transmissions
-        elif match := re.search(self.patterns['ysf_rx'], message):
+        elif match := self.patterns['ysf_rx'].search(message):
             entry.data = {
                 'event': 'ysf_rx',
                 'source_type': match.group(1),  # 'network' or 'RF'
@@ -136,7 +136,7 @@ class MMDVMHostParser:
                 'mode': 'YSF'
             }
         
-        elif match := re.search(self.patterns['ysf_end'], message):
+        elif match := self.patterns['ysf_end'].search(message):
             entry.data = {
                 'event': 'ysf_end',
                 'source_type': match.group(1),  # 'network' or 'RF'
@@ -146,7 +146,7 @@ class MMDVMHostParser:
             }
         
         # P25 transmissions
-        elif match := re.search(self.patterns['p25_rx'], message):
+        elif match := self.patterns['p25_rx'].search(message):
             entry.data = {
                 'event': 'p25_rx',
                 'source_type': match.group(1),  # 'network' or 'RF'
@@ -155,7 +155,7 @@ class MMDVMHostParser:
                 'mode': 'P25'
             }
         
-        elif match := re.search(self.patterns['p25_end'], message):
+        elif match := self.patterns['p25_end'].search(message):
             entry.data = {
                 'event': 'p25_end',
                 'source_type': match.group(1),  # 'network' or 'RF'
@@ -165,7 +165,7 @@ class MMDVMHostParser:
             }
         
         # NXDN transmissions
-        elif match := re.search(self.patterns['nxdn_rx'], message):
+        elif match := self.patterns['nxdn_rx'].search(message):
             entry.data = {
                 'event': 'nxdn_rx',
                 'source_type': match.group(1),  # 'network' or 'RF'
@@ -174,7 +174,7 @@ class MMDVMHostParser:
                 'mode': 'NXDN'
             }
         
-        elif match := re.search(self.patterns['nxdn_end'], message):
+        elif match := self.patterns['nxdn_end'].search(message):
             entry.data = {
                 'event': 'nxdn_end',
                 'source_type': match.group(1),  # 'network' or 'RF'
@@ -183,15 +183,10 @@ class MMDVMHostParser:
                 'mode': 'NXDN'
             }
         
-        # FM transmissions
-        elif match := re.search(self.patterns['fm_rx'], message):
-            entry.data = {
-                'event': 'fm_rx',
-                'mode': 'FM'
-            }
+        # Note: FM does not log reception events - activity tracked via mode changes only
         
         # Modem status
-        elif match := re.search(self.patterns['modem_connected'], message):
+        elif match := self.patterns['modem_connected'].search(message):
             entry.data = {
                 'event': 'modem_info',
                 'protocol_version': match.group(1),
@@ -228,13 +223,13 @@ class DMRGatewayParser:
         entry = LogEntry(timestamp, level, message, 'dmrgateway')
         
         # Check for MMDVM connection (no disconnect is logged by gateway)
-        if re.search(self.patterns['mmdvm_connected'], message):
+        if self.patterns['mmdvm_connected'].search(message):
             entry.data = {
                 'event': 'dmr_mmdvm_connected'
             }
         
         # Check for network login (e.g., "HBlink4, Logged into the master successfully")
-        elif match := re.search(self.patterns['network_connected'], message):
+        elif match := self.patterns['network_connected'].search(message):
             network = match.group(1).strip()
             self.networks[network] = True
             entry.data = {
@@ -243,7 +238,7 @@ class DMRGatewayParser:
             }
         
         # Check for network closing (e.g., "HBlink4, Closing DMR Network")
-        elif match := re.search(self.patterns['network_disconnected'], message):
+        elif match := self.patterns['network_disconnected'].search(message):
             network = match.group(1).strip()
             self.networks[network] = False
             entry.data = {
@@ -252,7 +247,7 @@ class DMRGatewayParser:
             }
         
         # Talkgroup activity (legacy)
-        elif match := re.search(self.patterns['talkgroup_activity'], message):
+        elif match := self.patterns['talkgroup_activity'].search(message):
             entry.data = {
                 'event': 'talkgroup_activity',
                 'source': match.group(1),
@@ -289,7 +284,7 @@ class YSFGatewayParser:
         entry = LogEntry(timestamp, level, message, 'ysfgateway')
         
         # Check for linked to reflector
-        if match := re.search(self.patterns['network_connected'], message):
+        if match := self.patterns['network_connected'].search(message):
             reflector = match.group(1).strip()
             entry.data = {
                 'event': 'ysf_linked',
@@ -297,13 +292,13 @@ class YSFGatewayParser:
             }
         
         # Check for link to MMDVM successful
-        elif re.search(self.patterns['mmdvm_connected'], message):
+        elif self.patterns['mmdvm_connected'].search(message):
             entry.data = {
                 'event': 'ysf_mmdvm_connected'
             }
         
         # Check for automatic reconnection
-        elif match := re.search(self.patterns['network_reconnected'], message):
+        elif match := self.patterns['network_reconnected'].search(message):
             reflector_id = match.group(1)
             reflector_name = match.group(2).strip()
             entry.data = {
@@ -313,20 +308,20 @@ class YSFGatewayParser:
             }
         
         # Manual connection request
-        elif match := re.search(self.patterns['network_connect_requested'], message):
+        elif match := self.patterns['network_connect_requested'].search(message):
             entry.data = {
                 'event': 'ysf_connect_requested',
                 'reflector': match.group(1).strip()
             }
         
         # Disconnect request
-        elif re.search(self.patterns['network_disconnected'], message):
+        elif self.patterns['network_disconnected'].search(message):
             entry.data = {
                 'event': 'ysf_disconnect_requested'
             }
         
         # Link failed (connection lost - polls lost)
-        elif re.search(self.patterns['link_failed'], message):
+        elif self.patterns['link_failed'].search(message):
             entry.data = {
                 'event': 'ysf_link_failed'
             }
@@ -361,19 +356,19 @@ class P25GatewayParser:
         entry = LogEntry(timestamp, level, message, 'p25gateway')
         
         # Check for MMDVM (Rpt network) connection opening
-        if re.search(self.patterns['mmdvm_connected'], message):
+        if self.patterns['mmdvm_connected'].search(message):
             entry.data = {
                 'event': 'p25_mmdvm_connected'
             }
         
         # Check for MMDVM (Rpt network) connection closing
-        elif re.search(self.patterns['mmdvm_disconnected'], message):
+        elif self.patterns['mmdvm_disconnected'].search(message):
             entry.data = {
                 'event': 'p25_mmdvm_disconnected'
             }
         
         # Check for P25 network (reflector) connection
-        elif match := re.search(self.patterns['network_connected'], message):
+        elif match := self.patterns['network_connected'].search(message):
             reflector = match.group(1)
             entry.data = {
                 'event': 'p25_reflector_linked',
@@ -381,19 +376,19 @@ class P25GatewayParser:
             }
         
         # Check for P25 network opening
-        elif re.search(self.patterns['network_opening'], message):
+        elif self.patterns['network_opening'].search(message):
             entry.data = {
                 'event': 'p25_network_opening'
             }
         
         # Check for P25 network closing
-        elif re.search(self.patterns['network_disconnected'], message):
+        elif self.patterns['network_disconnected'].search(message):
             entry.data = {
                 'event': 'p25_network_closing'
             }
         
         # Check for recvfrom error (connection to reflector lost)
-        elif re.search(self.patterns['link_failed'], message):
+        elif self.patterns['link_failed'].search(message):
             entry.data = {
                 'event': 'p25_connection_lost'
             }
