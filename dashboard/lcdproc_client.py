@@ -151,8 +151,9 @@ class LCDprocClient:
                         if not command:
                             continue
                         
-                        logger.debug(f"Received command: {command}")
+                        logger.info(f"Received command: {command}")
                         response = self._process_command(command)
+                        logger.info(f"Response: {response}")
                         
                         # Send response with null terminator (LCDproc protocol)
                         writer.write(f"{response}\x00".encode('utf-8'))
