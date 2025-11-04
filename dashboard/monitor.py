@@ -42,7 +42,7 @@ class LogMonitor:
         
         # Parse recent log entries to establish current state (suppress broadcasts during scan)
         state.suppress_broadcasts = True
-        await self.parse_recent_entries(lookback_lines=1000)
+        await self.parse_recent_entries(lookback_lines=5000)  # Increased from 1000 to 5000
         state.suppress_broadcasts = False
         
         logger.info(f"Initialized {self.name} monitor - now watching for live events")
@@ -62,7 +62,7 @@ class LogMonitor:
                 logger.error(f"Error monitoring {self.name}: {e}")
                 await asyncio.sleep(5)  # Wait longer on error
     
-    async def parse_recent_entries(self, lookback_lines: int = 1000):
+    async def parse_recent_entries(self, lookback_lines: int = 5000):
         """Parse recent log entries to establish current state on startup
         
         Scans backwards through logs looking for current state only.
@@ -74,6 +74,16 @@ class LogMonitor:
             
             # Try current log file first
             found_count = await self._scan_for_state(self.path, lookback_lines, state_to_find)
+            
+            # If we didn't find everything, try yesterday's log
+            if not all(state_to_find.values()):
+                yesterday = self.path.parent / self.path.name.replace(
+                    datetime.now().strftime('%Y-%m-%d'),
+                    (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+                )
+                if yesterday.exists():
+                    logger.debug(f"Scanning yesterday's log for remaining state: {yesterday}")
+                    found_count += await self._scan_for_state(yesterday, lookback_lines, state_to_find)
             
             logger.info(f"Initial scan for {self.name}: found {found_count} state items, still looking for: {[k for k, v in state_to_find.items() if not v]}")
         
@@ -91,12 +101,13 @@ class LogMonitor:
         if 'DMRGateway' in self.name:
             targets['dmr_mmdvm_connection'] = False
             targets['dmr_network_connection'] = False
-        elif 'P25Gateway' in self.name:
-            targets['p25_mmdvm_connection'] = False
-            targets['p25_reflector'] = False
-        elif 'YSFGateway' in self.name:
-            targets['ysf_mmdvm_connection'] = False
-            targets['ysf_reflector'] = False
+        # TODO: Re-enable when we have confirmed patterns for YSF/P25
+        # elif 'P25Gateway' in self.name:
+        #     targets['p25_mmdvm_connection'] = False
+        #     targets['p25_reflector'] = False
+        # elif 'YSFGateway' in self.name:
+        #     targets['ysf_mmdvm_connection'] = False
+        #     targets['ysf_reflector'] = False
         
         return targets
     
@@ -184,47 +195,49 @@ class LogMonitor:
             state_to_find['dmr_network_connection'] = True  # Found state (disconnected)
             found_something = True
         
-        elif event_type == 'p25_mmdvm_connected' and not state_to_find.get('p25_mmdvm_connection'):
-            state.update_network_status('P25-MMDVM', True)
-            state_to_find['p25_mmdvm_connection'] = True
-            found_something = True
-            logger.info(f"Initial scan: Found P25-MMDVM connection")
+        # TODO: P25 initial scan - DISABLED until we have confirmed patterns
+        # elif event_type == 'p25_mmdvm_connected' and not state_to_find.get('p25_mmdvm_connection'):
+        #     state.update_network_status('P25-MMDVM', True)
+        #     state_to_find['p25_mmdvm_connection'] = True
+        #     found_something = True
+        #     logger.info(f"Initial scan: Found P25-MMDVM connection")
         
-        elif event_type == 'p25_mmdvm_disconnected' and not state_to_find.get('p25_mmdvm_connection'):
-            state.update_network_status('P25-MMDVM', False)
-            state_to_find['p25_mmdvm_connection'] = True  # Found state (disconnected)
-            found_something = True
-            logger.info(f"Initial scan: Found P25-MMDVM disconnected")
+        # elif event_type == 'p25_mmdvm_disconnected' and not state_to_find.get('p25_mmdvm_connection'):
+        #     state.update_network_status('P25-MMDVM', False)
+        #     state_to_find['p25_mmdvm_connection'] = True
+        #     found_something = True
+        #     logger.info(f"Initial scan: Found P25-MMDVM disconnected")
         
-        elif event_type == 'p25_reflector_linked' and not state_to_find.get('p25_reflector'):
-            reflector = entry.data.get('reflector', 'Unknown')
-            state.update_network_status('P25-Reflector', True, target=reflector)
-            state_to_find['p25_reflector'] = True
-            found_something = True
-            logger.info(f"Initial scan: Found P25 reflector connection to {reflector}")
+        # elif event_type == 'p25_reflector_linked' and not state_to_find.get('p25_reflector'):
+        #     reflector = entry.data.get('reflector', 'Unknown')
+        #     state.update_network_status('P25-Reflector', True, target=reflector)
+        #     state_to_find['p25_reflector'] = True
+        #     found_something = True
+        #     logger.info(f"Initial scan: Found P25 reflector connection to {reflector}")
         
-        elif event_type == 'p25_network_closing' and not state_to_find.get('p25_reflector'):
-            state.update_network_status('P25-Reflector', False)
-            state_to_find['p25_reflector'] = True  # Found state (disconnected)
-            found_something = True
+        # elif event_type == 'p25_network_closing' and not state_to_find.get('p25_reflector'):
+        #     state.update_network_status('P25-Reflector', False)
+        #     state_to_find['p25_reflector'] = True
+        #     found_something = True
         
-        elif event_type == 'ysf_mmdvm_connected' and not state_to_find.get('ysf_mmdvm_connection'):
-            state.update_network_status('YSF-MMDVM', True)
-            state_to_find['ysf_mmdvm_connection'] = True
-            found_something = True
-            logger.info(f"Initial scan: Found YSF-MMDVM connection")
+        # TODO: YSF initial scan - DISABLED until we have confirmed patterns
+        # elif event_type == 'ysf_mmdvm_connected' and not state_to_find.get('ysf_mmdvm_connection'):
+        #     state.update_network_status('YSF-MMDVM', True)
+        #     state_to_find['ysf_mmdvm_connection'] = True
+        #     found_something = True
+        #     logger.info(f"Initial scan: Found YSF-MMDVM connection")
         
-        elif event_type in ['ysf_linked', 'ysf_reconnected'] and not state_to_find.get('ysf_reflector'):
-            reflector = entry.data.get('reflector', 'Unknown')
-            state.update_network_status('YSF-Reflector', True, reflector)
-            state_to_find['ysf_reflector'] = True
-            found_something = True
-            logger.info(f"Initial scan: Found YSF reflector connection to {reflector}")
+        # elif event_type in ['ysf_linked', 'ysf_reconnected'] and not state_to_find.get('ysf_reflector'):
+        #     reflector = entry.data.get('reflector', 'Unknown')
+        #     state.update_network_status('YSF-Reflector', True, reflector)
+        #     state_to_find['ysf_reflector'] = True
+        #     found_something = True
+        #     logger.info(f"Initial scan: Found YSF reflector connection to {reflector}")
         
-        elif event_type == 'ysf_disconnect_requested' and not state_to_find.get('ysf_reflector'):
-            state.update_network_status('YSF-Reflector', False)
-            state_to_find['ysf_reflector'] = True  # Found state (disconnected)
-            found_something = True
+        # elif event_type == 'ysf_disconnect_requested' and not state_to_find.get('ysf_reflector'):
+        #     state.update_network_status('YSF-Reflector', False)
+        #     state_to_find['ysf_reflector'] = True
+        #     found_something = True
         
         return found_something
     
@@ -290,62 +303,66 @@ class LogMonitor:
         elif event_type == 'network_disconnected':
             state.update_network_status(entry.data['network'], False)
         
-        # YSF Gateway events
-        elif event_type == 'ysf_linked':
-            # YSF linked to a reflector
-            reflector = entry.data.get('reflector', 'Unknown')
-            state.update_network_status('YSF-Reflector', True, reflector)
-            log_fn(f"YSF linked to reflector: {reflector}")
+        # TODO: YSF Gateway events - DISABLED until we have confirmed patterns
+        # When re-enabling, these events should:
+        # - ysf_linked: Set YSF-Reflector=True with reflector name
+        # - ysf_reconnected: Set YSF-Reflector=True with reflector name  
+        # - ysf_mmdvm_connected: Set YSF-MMDVM=True
+        # - ysf_disconnect_requested: Set YSF-Reflector=False
+        # - ysf_link_failed: Set YSF-Reflector=False
         
-        elif event_type == 'ysf_reconnected':
-            # YSF reconnected to reflector
-            reflector = entry.data.get('reflector', 'Unknown')
-            state.update_network_status('YSF-Reflector', True, reflector)
-            log_fn(f"YSF reconnected to reflector: {reflector}")
+        # elif event_type == 'ysf_linked':
+        #     reflector = entry.data.get('reflector', 'Unknown')
+        #     state.update_network_status('YSF-Reflector', True, reflector)
+        #     log_fn(f"YSF linked to reflector: {reflector}")
         
-        elif event_type == 'ysf_mmdvm_connected':
-            # YSFGateway successfully connected to MMDVMHost (no disconnect is logged)
-            state.update_network_status('YSF-MMDVM', True)
-            log_fn("YSF Gateway connected to MMDVM")
+        # elif event_type == 'ysf_reconnected':
+        #     reflector = entry.data.get('reflector', 'Unknown')
+        #     state.update_network_status('YSF-Reflector', True, reflector)
+        #     log_fn(f"YSF reconnected to reflector: {reflector}")
         
-        elif event_type == 'ysf_disconnect_requested':
-            # YSF disconnecting from reflector
-            state.update_network_status('YSF-Reflector', False)
-            log_fn("YSF disconnect requested")
+        # elif event_type == 'ysf_mmdvm_connected':
+        #     state.update_network_status('YSF-MMDVM', True)
+        #     log_fn("YSF Gateway connected to MMDVM")
         
-        elif event_type == 'ysf_link_failed':
-            # YSF connection to reflector lost (polls lost)
-            state.update_network_status('YSF-Reflector', False)
-            log_fn("YSF link failed (polls lost)")
+        # elif event_type == 'ysf_disconnect_requested':
+        #     state.update_network_status('YSF-Reflector', False)
+        #     log_fn("YSF disconnect requested")
         
-        # P25 Gateway events
-        elif event_type == 'p25_mmdvm_connected':
-            # P25Gateway opened Rpt network connection to MMDVMHost
-            state.update_network_status('P25-MMDVM', True)
-            log_fn("P25 Gateway connected to MMDVM")
+        # elif event_type == 'ysf_link_failed':
+        #     state.update_network_status('YSF-Reflector', False)
+        #     log_fn("YSF link failed (polls lost)")
         
-        elif event_type == 'p25_mmdvm_disconnected':
-            # P25Gateway closed Rpt network connection
-            state.update_network_status('P25-MMDVM', False)
-            log_fn("P25 Gateway disconnected from MMDVM")
+        # TODO: P25 Gateway events - DISABLED until we have confirmed patterns
+        # When re-enabling, these events should:
+        # - p25_mmdvm_connected: Set P25-MMDVM=True
+        # - p25_mmdvm_disconnected: Set P25-MMDVM=False
+        # - p25_reflector_linked: Set P25-Reflector=True with reflector number
+        # - p25_network_closing: Set P25-Reflector=False
+        # - p25_connection_lost: Set P25-Reflector=False
         
-        elif event_type == 'p25_reflector_linked':
-            # P25Gateway statically linked to a reflector
-            reflector = entry.data.get('reflector', 'Unknown')
-            state.update_network_status('P25-Reflector', True, target=reflector)
-            log_fn(f"P25 Gateway linked to reflector: {reflector} (from log parsing)")
+        # elif event_type == 'p25_mmdvm_connected':
+        #     state.update_network_status('P25-MMDVM', True)
+        #     log_fn("P25 Gateway connected to MMDVM")
         
-        elif event_type == 'p25_network_closing':
-            # P25 network closing (reflector disconnecting)
-            state.update_network_status('P25-Reflector', False)
-            log_fn("P25 network closing")
+        # elif event_type == 'p25_mmdvm_disconnected':
+        #     state.update_network_status('P25-MMDVM', False)
+        #     log_fn("P25 Gateway disconnected from MMDVM")
         
-        elif event_type == 'p25_connection_lost':
-            # P25 connection to reflector lost (recvfrom error)
-            state.update_network_status('P25-Reflector', False)
-            log_fn("P25 connection lost (recvfrom error)")
+        # elif event_type == 'p25_reflector_linked':
+        #     reflector = entry.data.get('reflector', 'Unknown')
+        #     state.update_network_status('P25-Reflector', True, target=reflector)
+        #     log_fn(f"P25 Gateway linked to reflector: {reflector}")
         
-        # DMR Gateway events
+        # elif event_type == 'p25_network_closing':
+        #     state.update_network_status('P25-Reflector', False)
+        #     log_fn("P25 network closing")
+        
+        # elif event_type == 'p25_connection_lost':
+        #     state.update_network_status('P25-Reflector', False)
+        #     log_fn("P25 connection lost (recvfrom error)")
+        
+        # DMR Gateway events (WORKING - DO NOT MODIFY)
         elif event_type == 'dmr_mmdvm_connected':
             # DMRGateway connected to MMDVMHost (no disconnect is logged)
             state.update_network_status('DMR-MMDVM', True)
