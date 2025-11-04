@@ -69,20 +69,31 @@ class LCDprocClient:
     
     async def start(self):
         """Start the LCDproc server"""
-        self.server = await asyncio.start_server(
-            self._handle_client,
-            self.host,
-            self.port,
-            reuse_address=True
-        )
-        self.running = True
-        
-        # Start serving
-        asyncio.create_task(self.server.serve_forever())
-        
-        addr = self.server.sockets[0].getsockname()
-        logger.info(f"LCDproc virtual display listening on {addr[0]}:{addr[1]}")
-        logger.info(f"Configure MMDVMHost MMDVM.ini [LCDproc] Address={addr[0]} Port={addr[1]}")
+        try:
+            logger.info(f"Starting LCDproc server on {self.host}:{self.port}...")
+            self.server = await asyncio.start_server(
+                self._handle_client,
+                self.host,
+                self.port,
+                reuse_address=True
+            )
+            self.running = True
+            
+            addr = self.server.sockets[0].getsockname()
+            logger.info(f"LCDproc server created, bound to {addr[0]}:{addr[1]}")
+            
+            # Start serving in background
+            logger.info("Starting server to accept connections...")
+            async def serve():
+                async with self.server:
+                    await self.server.serve_forever()
+            
+            asyncio.create_task(serve())
+            logger.info(f"LCDproc virtual display is now accepting connections on {addr[0]}:{addr[1]}")
+            logger.info(f"Configure MMDVMHost MMDVM.ini [LCDproc] Address={addr[0]} Port={addr[1]}")
+        except Exception as e:
+            logger.error(f"Failed to start LCDproc server: {e}", exc_info=True)
+            raise
     
     async def stop(self):
         """Stop the LCDproc server"""
