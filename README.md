@@ -33,7 +33,7 @@ The following modes have been tested and verified working:
 - ⚠️ **NXDN** - Code in place but not verified  
 - ⚠️ **POCSAG** - Code in place but not verified
 
-If you test D-Star, NXDN, or POCSAG modes, please report issues or confirm functionality!
+D-Star, NXDN, or POCSAG modes logs needed to implement!
 
 ## Design Goals
 
