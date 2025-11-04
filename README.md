@@ -72,17 +72,7 @@ Since MMDVMHost doesn't provide an API, this dashboard monitors log files in rea
 - 📡 Current operating mode (DMR, D-Star, YSF, P25, NXDN, FM)
 - 📞 Active transmissions with callsigns and talkgroups
 - 📋 Recent call history
-- 🌍 Network connection status
-- 📈 Daily statistics and activity
-
-## Screenshots
-
-**Main Dashboard View:**
-- System statistics (calls, users, networks)
-- Active transmissions with live indicators
-- Recent call history
-- Network connection status
-- Real-time event log
+- 🌍 Network connections
 
 ## Documentation
 
@@ -110,17 +100,6 @@ Since MMDVMHost doesn't provide an API, this dashboard monitors log files in rea
   }
 }
 ```
-
-## Supported Modes & Protocols
-
-| Mode | Status | Features |
-|------|--------|----------|
-| **DMR** | ✅ | Dual timeslot, talkgroups, DMRGateway |
-| **D-Star** | ✅ | Callsigns, reflectors |
-| **YSF** | ✅ | Reflectors, YSFGateway |
-| **P25** | ✅ | Talkgroups, P25Gateway |
-| **NXDN** | ✅ | Talkgroups, NXDNGateway |
-| **FM** | ✅ | Analog mode |
 
 ## Testing Without Hardware
 
