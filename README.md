@@ -40,7 +40,6 @@ D-Star, NXDN, or POCSAG modes logs needed to implement!
 🎯 **Resource Efficiency First**: Optimized for NanoPi NEO and similar low-resource SBCs  
 📊 **Configuration-aware Monitoring**: Reads MMDVM.ini and gateway configs to understand expected state  
 📜 **Multi-Day Log Scanning**: Scans previous days' logs (up to 5 days) to establish baseline state  
-🎨 **Mode-Based Color Coding**: Visual distinction for all supported modes  
 📋 **Live Log Viewer**: Resizable window showing recent log entries  
 💡 **Status Cards**: Mode and network status cards with three-state pills (connected/disconnected/unknown)  
 
@@ -158,7 +157,7 @@ See [INSTALL.md](INSTALL.md) for complete instructions.
 ## Performance
 
 - Memory: ~30-50 MB
-- CPU: <5% on Raspberry Pi 4
+- CPU: <3% on Raspberry Pi 4
 - Parses: ~500 log lines/second
 - Latency: <50ms WebSocket updates
 
@@ -166,9 +165,6 @@ See [INSTALL.md](INSTALL.md) for complete instructions.
 
 Contributions welcome! This project needs:
 - Additional log format parsers
-- Callsign database integration
-- Audio alerts
-- Historical data storage
 - Mobile-optimized views
 
 ## License
@@ -187,11 +183,5 @@ GNU General Public License v3.0
 
 **Cort Buffington, N0MJS**  
 Creator of HBlink4 and the STM32-DVM-MTR2K MMDVM modem.
-
-## License
-
-To be determined.
-
----
 
 **0x49 DE N0MJS**
