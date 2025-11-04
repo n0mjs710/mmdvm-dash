@@ -268,6 +268,10 @@ class LogMonitor:
                 if not line:
                     continue
                 
+                # Add to log buffer (only for MMDVMHost)
+                if self.name == 'MMDVMHost':
+                    state.add_log_entry(line)
+                
                 if self.parser is None:
                     logger.debug(f"Skipping line from {self.name} - no parser available")
                     continue

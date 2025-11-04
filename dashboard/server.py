@@ -78,6 +78,17 @@ async def get_stats():
         "current_mode": status['current_mode']
     }
 
+@app.get("/api/logs")
+async def get_logs(limit: int = 50):
+    """Get recent log entries from MMDVMHost"""
+    logs = list(state.log_buffer)
+    if limit and limit < len(logs):
+        logs = logs[-limit:]
+    return {
+        "logs": logs,
+        "count": len(logs)
+    }
+
 # WebSocket endpoint
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
