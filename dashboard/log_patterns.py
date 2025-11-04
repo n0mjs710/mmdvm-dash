@@ -38,13 +38,6 @@ MMDVMHOST_PATTERNS = {
     # Groups: (1) protocol version, (2) description
     'modem_connected': r'MMDVM protocol version: (\d+), description: (.+)',
     
-    # Network status (when MMDVMHost connects to protocol networks)
-    # These are rarely used as gateways handle network connections
-    'dmr_network_connected': r'DMR, Connection to ([^\s]+) opened',
-    'p25_network_connected': r'P25, Connection to ([^\s]+) opened',
-    'ysf_network_connected': r'YSF, Connection to ([^\s]+) opened',
-    'nxdn_network_connected': r'NXDN, Connection to ([^\s]+) opened',
-    
     # Voice transmissions - start
     # DMR: "DMR Slot 2, received RF voice header from N0CALL to TG 31665"
     # Groups: (1) slot number, (2) network|RF, (3) callsign, (4) talkgroup
