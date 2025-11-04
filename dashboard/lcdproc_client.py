@@ -182,6 +182,8 @@ class LCDprocClient:
         
         # hello - respond with connect string
         if command == 'hello':
+            # Clear the "waiting" message now that client has connected
+            self._notify_update()
             return f'connect LCDproc 0.5.9 protocol 0.3.1 lcd wid {self.width} hgt {self.height} cellwid 5 cellhgt 8'
         
         # bye
@@ -210,7 +212,7 @@ class LCDprocClient:
             self.screens[screen_id] = LCDScreen()
             if not self.active_screen:
                 self.active_screen = screen_id
-            logger.debug(f"Screen added: {screen_id}")
+            logger.info(f"Screen added: {screen_id}")
             return 'success'
         
         # screen_set <SCR> [flags...]
@@ -229,7 +231,21 @@ class LCDprocClient:
                         idx = parts.index('-priority')
                         if idx + 1 < len(parts):
                             try:
-                                self.screens[screen_id].priority = int(parts[idx + 1])
+                                old_priority = self.screens[screen_id].priority
+                                new_priority = int(parts[idx + 1])
+                                self.screens[screen_id].priority = new_priority
+                                
+                                # Switch to highest priority screen
+                                highest_priority_screen = max(
+                                    self.screens.items(),
+                                    key=lambda x: x[1].priority
+                                )
+                                old_active = self.active_screen
+                                self.active_screen = highest_priority_screen[0]
+                                
+                                if old_active != self.active_screen:
+                                    logger.info(f"Active screen changed: {old_active} -> {self.active_screen} (priority {new_priority})")
+                                    self._notify_update()
                             except ValueError:
                                 pass
                     logger.debug(f"Screen updated: {screen_id}")
