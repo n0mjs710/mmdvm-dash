@@ -120,11 +120,8 @@ class LCDprocClient:
         self.client_writer = writer
         
         try:
-            # Send greeting with null terminator (LCDproc protocol)
-            greeting = f"connect LCDproc 0.5.9 protocol 0.3.1 lcd wid {self.width} hgt {self.height} cellwid 5 cellhgt 8\x00"
-            writer.write(greeting.encode('utf-8'))
-            await writer.drain()
-            logger.debug(f"Sent greeting to {addr}")
+            # Don't send greeting immediately - wait for client to send "hello" first
+            logger.debug(f"Waiting for hello from {addr}")
             
             # Process commands - LCDproc uses null-terminated strings
             buffer = b''
@@ -183,9 +180,9 @@ class LCDprocClient:
     def _process_command(self, command: str) -> str:
         """Process a single LCDproc command and return response"""
         
-        # hello
+        # hello - respond with connect string
         if command == 'hello':
-            return 'success'
+            return f'connect LCDproc 0.5.9 protocol 0.3.1 lcd wid {self.width} hgt {self.height} cellwid 5 cellhgt 8'
         
         # bye
         elif command == 'bye':
