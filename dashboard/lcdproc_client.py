@@ -132,11 +132,20 @@ class LCDprocClient:
                     if not line:
                         break
                     
-                    command = line.decode('utf-8').strip()
+                    # Decode, handling null terminators and stripping whitespace
+                    try:
+                        command = line.decode('utf-8', errors='ignore').strip('\x00\r\n ')
+                    except:
+                        logger.warning(f"Could not decode command: {line.hex()}")
+                        continue
+                    
                     if not command:
                         continue
                     
+                    logger.debug(f"Received command: {command}")
                     response = self._process_command(command)
+                    
+                    # Send response with null terminator (LCDproc protocol)
                     writer.write(f"{response}\n".encode('utf-8'))
                     await writer.drain()
                     
