@@ -242,13 +242,10 @@ class DashboardState:
             self.status.info = new_info
             changed = True
         
-        # Store enabled networks from MMDVM config
-        enabled_networks = expected_state.get('enabled_networks', [])
-        for network in enabled_networks:
-            # Only set to True if not already set to a specific target (reflector/TG)
-            if network not in self.status.networks or self.status.networks[network] is False:
-                self.status.networks[network] = True  # Mark as configured
-                changed = True
+        # Note: We do NOT set network connection status from config
+        # Network connection status (YSF, P25, DMR-HBlink4, etc.) should ONLY
+        # come from log parsing, not from INI configuration
+        # The config only tells us what's enabled, not what's connected
         
         # Update gateway status
         gateways = expected_state.get('gateways', {})
@@ -269,7 +266,7 @@ class DashboardState:
         # Only update timestamp and broadcast if something changed
         if changed:
             self.status.last_update = datetime.now().timestamp()
-            logger.debug(f"State changed - MMDVMHost={self.status.mmdvm_running}, Networks={enabled_networks}, Gateways={list(self.status.gateways.keys())}")
+            logger.debug(f"State changed - MMDVMHost={self.status.mmdvm_running}, Gateways={list(self.status.gateways.keys())}")
             # Immediate broadcast for process status changes (critical updates)
             asyncio.create_task(self.broadcast_status_update())
         else:
