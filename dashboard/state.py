@@ -63,15 +63,12 @@ class Event:
 class DashboardState:
     """Maintains dashboard state"""
     
-    def __init__(self, max_recent_calls: int = 50, max_events: int = 100, log_buffer_size: int = 50):
+    def __init__(self, max_recent_calls: int = 50, max_events: int = 100):
         self.status = SystemStatus()
         self.recent_calls: deque = deque(maxlen=max_recent_calls)
         self.events: deque = deque(maxlen=max_events)
         self.active_transmissions: Dict[str, Transmission] = {}
         self.websocket_clients: Set = set()
-        
-        # Log buffer for recent MMDVMHost log entries
-        self.log_buffer: deque = deque(maxlen=log_buffer_size)
         
         # Statistics
         self.stats = {
@@ -224,13 +221,6 @@ class DashboardState:
     def add_event(self, event: Event):
         """Add event to history"""
         self.events.append(event)
-    
-    def add_log_entry(self, log_line: str):
-        """Add a log line to the ring buffer"""
-        self.log_buffer.append({
-            'timestamp': datetime.now().timestamp(),
-            'line': log_line.rstrip()
-        })
     
     def update_expected_state(self, expected_state: Dict[str, Any]):
         """Update expected state from config reader"""
@@ -393,11 +383,4 @@ class DashboardState:
 
 
 # Global state instance
-from .config import config
-
-_monitoring_config = config.get('monitoring', default={})
-state = DashboardState(
-    max_recent_calls=_monitoring_config.get('max_recent_calls', 50),
-    max_events=_monitoring_config.get('max_events', 100),
-    log_buffer_size=_monitoring_config.get('log_buffer_size', 50)
-)
+state = DashboardState()

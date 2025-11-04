@@ -38,8 +38,7 @@
   "monitoring": {
     "max_recent_transmissions": 50,
     "max_events": 100,
-    "transmission_timeout_seconds": 300,
-    "log_buffer_size": 50
+    "transmission_timeout_seconds": 300
   },
   
   "display": {
