@@ -94,129 +94,63 @@ MMDVMHOST_PATTERNS = {
 # DMR GATEWAY PATTERNS
 # =============================================================================
 DMRGATEWAY_PATTERNS = {
-    # Connection to MMDVMHost
+    # CONFIRMED USEFUL: Connection to MMDVMHost at startup
     # Matches: "MMDVM has connected"
-    # No capture groups - just detects connection
+    # No capture groups - just detects initial connection
     'mmdvm_connected': r'MMDVM has connected',
     
-    # Network connections (e.g., HBlink4, BrandMeister, etc.)
+    # CONFIRMED USEFUL: Network connections (e.g., HBlink4, BrandMeister, etc.)
     # Matches: "HBlink4, Logged into the master successfully"
     # Groups: (1) network name (everything before comma)
     'network_connected': r'(.+), Logged into the master successfully',
     
-    # Network disconnections
-    # Matches: "HBlink4, Closing DMR Network"
+    # CONFIRMED USEFUL: Network disconnections/timeouts
+    # Matches: "HBlink4, Connection to the master has timed out, retrying connection"
     # Groups: (1) network name
-    'network_disconnected': r'(.+), Closing DMR Network',
-    
-    # Talkgroup activity (legacy - may not be in current logs)
-    # Matches: "Received voice header from 3113999 to TG 31665"
-    # Groups: (1) source ID, (2) talkgroup
-    'talkgroup_activity': r'Received voice (?:header|data) from (\d+) to TG (\d+)',
+    'network_disconnected': r'(.+), Connection to the master has timed out',
 }
 
 # =============================================================================
 # YSF GATEWAY PATTERNS
 # =============================================================================
 YSFGATEWAY_PATTERNS = {
-    # Connection to MMDVMHost
-    # Matches: "Link successful to MMDVM"
-    # No capture groups
-    'mmdvm_connected': r'Link successful to MMDVM',
-    
-    # Reflector connections
+    # CONFIRMED USEFUL: Reflector connections
     # Matches: "Linked to Kansas          " (note: reflector name may have trailing spaces)
-    # Groups: (1) reflector name (trailing spaces removed by .strip() in parser)
-    'network_connected': r'Linked to (.+?)(?:\s+)?$',
+    # Groups: (1) reflector name (trailing spaces removed in parser)
+    # This means BOTH network connected AND reflector connected (they are the same thing)
+    'reflector_linked': r'Linked to (.+?)(?:\s+)?$',
     
-    # Automatic reflector reconnection
-    # Matches: "Automatic (re-)connection to 12345 - "US Mountain""
-    # Groups: (1) reflector ID number, (2) reflector name
-    'network_reconnected': r'Automatic \(re-\)connection to (\d+) - "(.+?)"',
-    
-    # Manual connection request
-    # Matches: "Connect to US Mountain has been requested"
-    # Groups: (1) reflector name
-    'network_connect_requested': r'Connect to (.+) has been requested',
-    
-    # Reflector disconnections
-    # Manual disconnect: "Disconnect has been requested"
+    # CONFIRMED USEFUL: Network/Reflector disconnect
+    # Matches: "Closing YSF network connection"
     # No capture groups
-    'network_disconnected': r'Disconnect has been requested',
+    # This means BOTH network disconnected AND reflector disconnected
+    'network_disconnected': r'Closing YSF network connection',
     
-    # Connection lost (polls lost)
-    # Matches: "Link has failed, polls lost"
-    # No capture groups - indicates connection timeout/failure
-    'link_failed': r'Link has failed',
+    # NOT USEFUL - DO NOT USE: These look helpful but don't indicate actual connection status
+    # 'reconnecting': r'Reconnecting startup reflector',
+    # 'auto_reconnect': r'Automatic \(re-\)connection to (\d+) - "(.+?)"',
 }
 
 # =============================================================================
 # P25 GATEWAY PATTERNS
 # =============================================================================
 P25GATEWAY_PATTERNS = {
-    # Connection to MMDVMHost
-    # Matches: "Opening Rpt network connection"
-    # No capture groups
-    'mmdvm_connected': r'Opening Rpt network connection',
-    
-    # Disconnection from MMDVMHost
-    # Matches: "Closing Rpt network connection"
-    # No capture groups
-    'mmdvm_disconnected': r'Closing Rpt network connection',
-    
-    # Reflector connections
-    # Matches: "P25, linked to reflector 31328" or "P25GW, linked to reflector 3120"
+    # CONFIRMED USEFUL: Reflector connection (but doesn't confirm it worked)
+    # Matches: "Statically linked to reflector 31328"
     # Groups: (1) reflector number
-    'network_connected': r'linked to reflector (\d+)',
+    # NOTE: This just shows intent to link, not that it actually succeeded
+    'reflector_linked': r'Statically linked to reflector (\d+)',
     
-    # P25 network opening (before link established)
-    # Matches: "Opening P25 network connection"
-    # No capture groups
-    'network_opening': r'Opening P25 network connection',
-    
-    # Reflector disconnections
-    # Matches: "Closing P25 network connection"
-    # No capture groups
-    'network_disconnected': r'Closing P25 network connection',
-    
-    # Connection lost (network error)
-    # Matches: "Error returned from recvfrom, err: 88"
-    # No capture groups - indicates socket/network failure
-    'link_failed': r'Error returned from recvfrom',
+    # NOT USEFUL - DO NOT USE: These appear but don't indicate actual connection
+    # 'opening_rpt': r'Opening Rpt network connection',
+    # 'opening_p25': r'Opening P25 network connection',
 }
 
 # =============================================================================
 # NXDN GATEWAY PATTERNS
 # =============================================================================
-NXDNGATEWAY_PATTERNS = {
-    # Connection to MMDVMHost
-    # Matches: "Link successful to MMDVM"
-    # No capture groups (same format as YSF)
-    'mmdvm_connected': r'Link successful to MMDVM',
-    
-    # Reflector connections
-    # Matches: "Linked to NXDN Reflector" (format similar to YSF)
-    # Groups: (1) reflector name
-    'network_connected': r'Linked to (.+?)(?:\s+)?$',
-    
-    # Automatic reconnection (if supported)
-    # Groups: (1) reflector ID, (2) reflector name
-    'network_reconnected': r'Automatic \(re-\)connection to (\d+) - "(.+?)"',
-    
-    # Manual connection request
-    # Groups: (1) reflector name
-    'network_connect_requested': r'Connect to (.+) has been requested',
-    
-    # Reflector disconnections
-    # Manual disconnect request
-    # No capture groups
-    'network_disconnected': r'Disconnect has been requested',
-    
-    # Connection lost (polls lost)
-    # Same as YSF - indicates connection timeout
-    # No capture groups
-    'link_failed': r'Link has failed',
-}
+# NXDN not included in user analysis - keeping structure for future expansion
+NXDNGATEWAY_PATTERNS = {}
 
 # =============================================================================
 # PATTERN COMPILATION - Pre-compile all patterns for performance

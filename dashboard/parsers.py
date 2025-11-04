@@ -237,21 +237,13 @@ class DMRGatewayParser:
                 'network': network
             }
         
-        # Check for network closing (e.g., "HBlink4, Closing DMR Network")
+        # Check for network disconnection/timeout
         elif match := self.patterns['network_disconnected'].search(message):
             network = match.group(1).strip()
             self.networks[network] = False
             entry.data = {
                 'event': 'dmr_network_disconnected',
                 'network': network
-            }
-        
-        # Talkgroup activity (legacy)
-        elif match := self.patterns['talkgroup_activity'].search(message):
-            entry.data = {
-                'event': 'talkgroup_activity',
-                'source': match.group(1),
-                'talkgroup': match.group(2)
             }
         
         return entry
@@ -283,47 +275,18 @@ class YSFGatewayParser:
         
         entry = LogEntry(timestamp, level, message, 'ysfgateway')
         
-        # Check for linked to reflector
-        if match := self.patterns['network_connected'].search(message):
+        # Check for linked to reflector (network connected)
+        if match := self.patterns['reflector_linked'].search(message):
             reflector = match.group(1).strip()
             entry.data = {
-                'event': 'ysf_linked',
+                'event': 'ysf_reflector_linked',
                 'reflector': reflector
             }
         
-        # Check for link to MMDVM successful
-        elif self.patterns['mmdvm_connected'].search(message):
-            entry.data = {
-                'event': 'ysf_mmdvm_connected'
-            }
-        
-        # Check for automatic reconnection
-        elif match := self.patterns['network_reconnected'].search(message):
-            reflector_id = match.group(1)
-            reflector_name = match.group(2).strip()
-            entry.data = {
-                'event': 'ysf_reconnected',
-                'reflector_id': reflector_id,
-                'reflector': reflector_name
-            }
-        
-        # Manual connection request
-        elif match := self.patterns['network_connect_requested'].search(message):
-            entry.data = {
-                'event': 'ysf_connect_requested',
-                'reflector': match.group(1).strip()
-            }
-        
-        # Disconnect request
+        # Check for network disconnection
         elif self.patterns['network_disconnected'].search(message):
             entry.data = {
-                'event': 'ysf_disconnect_requested'
-            }
-        
-        # Link failed (connection lost - polls lost)
-        elif self.patterns['link_failed'].search(message):
-            entry.data = {
-                'event': 'ysf_link_failed'
+                'event': 'ysf_network_disconnected'
             }
         
         return entry
@@ -355,42 +318,12 @@ class P25GatewayParser:
         
         entry = LogEntry(timestamp, level, message, 'p25gateway')
         
-        # Check for MMDVM (Rpt network) connection opening
-        if self.patterns['mmdvm_connected'].search(message):
-            entry.data = {
-                'event': 'p25_mmdvm_connected'
-            }
-        
-        # Check for MMDVM (Rpt network) connection closing
-        elif self.patterns['mmdvm_disconnected'].search(message):
-            entry.data = {
-                'event': 'p25_mmdvm_disconnected'
-            }
-        
-        # Check for P25 network (reflector) connection
-        elif match := self.patterns['network_connected'].search(message):
+        # Check for reflector link (statically linked)
+        if match := self.patterns['reflector_linked'].search(message):
             reflector = match.group(1)
             entry.data = {
                 'event': 'p25_reflector_linked',
                 'reflector': reflector
-            }
-        
-        # Check for P25 network opening
-        elif self.patterns['network_opening'].search(message):
-            entry.data = {
-                'event': 'p25_network_opening'
-            }
-        
-        # Check for P25 network closing
-        elif self.patterns['network_disconnected'].search(message):
-            entry.data = {
-                'event': 'p25_network_closing'
-            }
-        
-        # Check for recvfrom error (connection to reflector lost)
-        elif self.patterns['link_failed'].search(message):
-            entry.data = {
-                'event': 'p25_connection_lost'
             }
         
         return entry
