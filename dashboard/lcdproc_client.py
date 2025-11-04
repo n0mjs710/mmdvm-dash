@@ -255,24 +255,39 @@ class LCDprocClient:
                     logger.debug(f"Widget added: {screen_id}.{widget_id} ({widget_type})")
             return 'success'
         
-        # widget_set <SCR> <WID> <X> <Y> ["<TEXT>"]
-        # MMDVMHost sends two formats:
-        #   widget_set Status Time 2147483644 0 "10:57:39 AM"  (with text)
-        #   widget_set DMR Slot2RSSI 1 4  (without text - just position)
+        # widget_set <SCR> <WID> ...params... ["<TEXT>"]
+        # MMDVMHost sends multiple formats:
+        #   widget_set Status Time 2147483644 0 "10:57:39 AM"  (simple string widget)
+        #   widget_set DMR Slot2RSSI 1 4  (position only)
+        #   widget_set DMR Slot1 3 0 4294967295 1 h 3 "Listening"  (scroller widget)
+        # Scroller format: screen widget left top right bottom direction speed "text"
         elif command.startswith('widget_set '):
-            # Try format with text first
-            match = re.match(r'widget_set (\S+) (\S+) (\d+) (\d+) "(.*)"', command)
-            if not match:
-                # Try format without text (just position)
-                match = re.match(r'widget_set (\S+) (\S+) (\d+) (\d+)$', command)
-                if match:
-                    screen_id, widget_id, x_param, y = match.groups()
-                    text = ""  # Empty text for position-only updates
-                else:
-                    logger.warning(f"Could not parse widget_set command: {command}")
-                    return 'success'
+            screen_id = None
+            widget_id = None
+            x_param = None
+            y = None
+            text = ""
+            
+            # Try scroller widget format first (8+ params with text)
+            match = re.match(r'widget_set (\S+) (\S+) (\d+) (\d+) (\d+) (\d+) (\S+) (\d+) "(.*)"', command)
+            if match:
+                screen_id, widget_id, left, top, right, bottom, direction, speed, text = match.groups()
+                x_param = left
+                y = top
             else:
-                screen_id, widget_id, x_param, y, text = match.groups()
+                # Try simple format with text (5 params)
+                match = re.match(r'widget_set (\S+) (\S+) (\d+) (\d+) "(.*)"', command)
+                if match:
+                    screen_id, widget_id, x_param, y, text = match.groups()
+                else:
+                    # Try format without text (just position, 4 params)
+                    match = re.match(r'widget_set (\S+) (\S+) (\d+) (\d+)$', command)
+                    if match:
+                        screen_id, widget_id, x_param, y = match.groups()
+                        text = ""
+                    else:
+                        logger.warning(f"Could not parse widget_set command: {command}")
+                        return 'success'
             
             # Auto-create screen if it doesn't exist
             if screen_id not in self.screens:
