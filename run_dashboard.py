@@ -45,6 +45,27 @@ async def start_monitors():
     state.update_expected_state(expected_state)
     logger.debug(f"System state updated: MMDVMHost running={expected_state.get('mmdvm_running')}")
     
+    # Start LCDproc virtual display server if enabled
+    lcd_enabled = config.get('lcdproc', 'enabled', default=False)
+    if lcd_enabled:
+        lcd_host = config.get('lcdproc', 'host', default='127.0.0.1')
+        lcd_port = config.get('lcdproc', 'port', default=13666)
+        
+        from dashboard.lcdproc_client import LCDprocClient
+        
+        lcd_client = LCDprocClient(host=lcd_host, port=lcd_port)
+        
+        # Set up callback to update state when display changes
+        def on_lcd_update(lines):
+            state.update_lcd_display(lines)
+        
+        lcd_client.on_update = on_lcd_update
+        await lcd_client.start()
+        logger.info(f"LCDproc virtual display started on {lcd_host}:{lcd_port}")
+        
+        # Store reference for cleanup
+        state.lcd_client = lcd_client
+    
     # Get all log paths from INI files
     log_paths = config_mgr.get_all_log_paths()
     
