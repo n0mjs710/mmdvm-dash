@@ -133,8 +133,10 @@ class LCDprocClient:
                     # Read data in chunks
                     chunk = await asyncio.wait_for(reader.read(1024), timeout=60.0)
                     if not chunk:
+                        logger.info("Client closed connection (no data)")
                         break
                     
+                    logger.info(f"Received {len(chunk)} bytes: {chunk[:100].hex()}")  # Log first 100 bytes
                     buffer += chunk
                     
                     # Process all complete commands (null-terminated)
@@ -149,6 +151,7 @@ class LCDprocClient:
                             continue
                         
                         if not command:
+                            logger.info("Empty command after decode")
                             continue
                         
                         logger.info(f"Received command: {command}")
