@@ -308,6 +308,11 @@ class LogMonitor:
             state.update_network_status('YSF', False)
             log_fn("YSF disconnect requested")
         
+        elif event_type == 'ysf_link_failed':
+            # YSF connection to reflector lost (polls lost)
+            state.update_network_status('YSF', False)
+            log_fn("YSF link failed (polls lost)")
+        
         # P25 Gateway events
         elif event_type == 'p25_mmdvm_connected':
             # P25Gateway opened Rpt network connection to MMDVMHost
@@ -329,6 +334,11 @@ class LogMonitor:
             # P25 network closing (reflector disconnecting)
             state.update_network_status('P25', False)
             log_fn("P25 network closing")
+        
+        elif event_type == 'p25_connection_lost':
+            # P25 connection to reflector lost (recvfrom error)
+            state.update_network_status('P25', False)
+            log_fn("P25 connection lost (recvfrom error)")
         
         # DMR Gateway events
         elif event_type == 'dmr_mmdvm_connected':
