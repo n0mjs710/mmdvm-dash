@@ -44,6 +44,16 @@ class MMDVMHostParser:
         self.network_status: Dict[str, bool] = {}
         # Load message patterns from centralized config
         self.patterns = get_patterns('mmdvmhost')
+        # Mode name normalization (match config_reader and frontend)
+        self.mode_name_map = {
+            'System Fusion': 'YSF',
+            'D-Star': 'D-Star',
+            'Idle': 'IDLE'
+        }
+    
+    def _normalize_mode(self, mode: str) -> str:
+        """Normalize mode names to match frontend expectations"""
+        return self.mode_name_map.get(mode, mode)
     
     def parse_line(self, line: str) -> Optional[LogEntry]:
         """Parse a single log line"""
@@ -83,10 +93,12 @@ class MMDVMHostParser:
         
         # Mode changes
         if match := self.patterns['mode_change'].search(message):
-            self.current_mode = match.group(1)
+            raw_mode = match.group(1)
+            normalized_mode = self._normalize_mode(raw_mode)
+            self.current_mode = normalized_mode
             entry.data = {
                 'event': 'mode_change',
-                'mode': self.current_mode
+                'mode': normalized_mode
             }
         
         # DMR transmissions
