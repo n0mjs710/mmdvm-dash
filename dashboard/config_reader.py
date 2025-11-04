@@ -372,8 +372,31 @@ class P25GatewayConfig(GatewayConfig):
     
     def _parse_settings(self):
         """Parse P25 Gateway specific settings - scan ALL stanzas with Enable parameter"""
-        # Scan all sections for anything with an 'Enable' or 'Enabled' parameter
+        # P25Gateway special case: [Network] section doesn't have Enable parameter
+        # It's implicitly enabled if the process is running
+        if self.config.has_section('Network'):
+            # Try to get static reflector ID from Network section
+            reflector_id = None
+            if self.config.has_option('Network', 'Static'):
+                reflector_id = self.config.get('Network', 'Static', fallback='').strip()
+            
+            # Network section is implicitly enabled if process is running
+            self.networks['Network'] = {
+                'type': 'network',
+                'section': 'Network',
+                'status': 'unknown',  # Will be determined from log parsing
+                'enabled': True,  # Implicitly enabled if process running
+                'reflector_id': reflector_id
+            }
+            self.enabled = True
+            logger.info(f"P25Gateway: Found network 'Network' (implicitly enabled, static={reflector_id})")
+        
+        # Scan all other sections for anything with an 'Enable' or 'Enabled' parameter
         for section in self.config.sections():
+            # Skip Network section - already handled above
+            if section == 'Network':
+                continue
+                
             # Check if this section has Enable/Enabled parameter
             has_enable = (self.config.has_option(section, 'Enable') or 
                          self.config.has_option(section, 'Enabled'))
@@ -385,32 +408,14 @@ class P25GatewayConfig(GatewayConfig):
                       self.config.getboolean(section, 'Enable', fallback=False))
             
             # Store ALL sections with Enable parameter, whether enabled or disabled
-            # Section is enabled - P25 Network is a network, others are features
-            is_network = section in ['Network', 'P25 Network']
-            
-            if is_network:
-                logger.info(f"P25Gateway: Found network '{section}' (enabled={enabled})")
-                # Try to get static reflector ID from Network section
-                reflector_id = None
-                if self.config.has_option(section, 'Static'):
-                    reflector_id = self.config.get(section, 'Static', fallback='').strip()
-                    
-                self.networks[section] = {
-                    'type': 'network', 
-                    'section': section, 
-                    'status': 'disabled' if not enabled else 'unknown',
-                    'enabled': enabled,
-                    'reflector_id': reflector_id
-                }
-            else:
-                # Non-network sections use section name as label
-                logger.info(f"P25Gateway: Found feature '{section}' (enabled={enabled})")
-                self.networks[section] = {
-                    'type': 'feature', 
-                    'section': section, 
-                    'status': 'disabled' if not enabled else 'enabled',
-                    'enabled': enabled
-                }
+            # Non-network sections use section name as label
+            logger.info(f"P25Gateway: Found feature '{section}' (enabled={enabled})")
+            self.networks[section] = {
+                'type': 'feature', 
+                'section': section, 
+                'status': 'disabled' if not enabled else 'enabled',
+                'enabled': enabled
+            }
             
             if enabled:
                 self.enabled = True  # Gateway has at least one enabled feature
