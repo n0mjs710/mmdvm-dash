@@ -133,7 +133,7 @@ class LCDprocClient:
                         logger.info("Client closed connection (no data)")
                         break
                     
-                    logger.info(f"Received {len(chunk)} bytes: {chunk[:100].hex()}")  # Log first 100 bytes
+                    logger.debug(f"Received {len(chunk)} bytes: {chunk[:100].hex()}")  # Log first 100 bytes
                     buffer += chunk
                     
                     # Process all complete commands (null-terminated)
@@ -148,12 +148,12 @@ class LCDprocClient:
                             continue
                         
                         if not command:
-                            logger.info("Empty command after decode")
+                            logger.debug("Empty command after decode")
                             continue
                         
-                        logger.info(f"Received command: {command}")
+                        logger.debug(f"Received command: {command}")
                         response = self._process_command(command)
-                        logger.info(f"Response: {response}")
+                        logger.debug(f"Response: {response}")
                         
                         # Send response with null terminator (LCDproc protocol)
                         writer.write(f"{response}\x00".encode('utf-8'))
@@ -190,6 +190,12 @@ class LCDprocClient:
         
         # noop (keepalive)
         elif command == 'noop':
+            return 'success'
+        
+        # output <NUM> - set backlight/output state
+        elif command.startswith('output '):
+            output_state = command[7:].strip()
+            logger.debug(f"Output state: {output_state}")
             return 'success'
         
         # client_set name <NAME>
@@ -249,40 +255,48 @@ class LCDprocClient:
                     logger.debug(f"Widget added: {screen_id}.{widget_id} ({widget_type})")
             return 'success'
         
-        # widget_set <SCR> <WID> <X> <Y> "<TEXT>"
-        # MMDVMHost sends: widget_set Status Time 2147483644 0 "10:57:39 AM"
-        # Format appears to be: screen widget left top "text"
-        # The large left value (2147483644) seems to be max_int, use 1 for leftmost position
+        # widget_set <SCR> <WID> <X> <Y> ["<TEXT>"]
+        # MMDVMHost sends two formats:
+        #   widget_set Status Time 2147483644 0 "10:57:39 AM"  (with text)
+        #   widget_set DMR Slot2RSSI 1 4  (without text - just position)
         elif command.startswith('widget_set '):
-            # Try format with 5 params first (screen, widget, left, top, text)
+            # Try format with text first
             match = re.match(r'widget_set (\S+) (\S+) (\d+) (\d+) "(.*)"', command)
-            if match:
-                screen_id, widget_id, x_param, y, text = match.groups()
-                
-                # Auto-create screen if it doesn't exist
-                if screen_id not in self.screens:
-                    logger.info(f"Auto-creating screen '{screen_id}' from widget_set")
-                    self.screens[screen_id] = LCDScreen()
-                    if not self.active_screen:
-                        self.active_screen = screen_id
-                
-                # Auto-create widget if it doesn't exist
-                if widget_id not in self.screens[screen_id].widgets:
-                    logger.info(f"Auto-creating widget '{widget_id}' in screen '{screen_id}'")
-                    self.screens[screen_id].widgets[widget_id] = LCDWidget(type='string')
-                
-                widget = self.screens[screen_id].widgets[widget_id]
-                # If X is very large (like max_int), default to 1 (leftmost)
-                x_val = int(x_param)
-                widget.x = 1 if x_val > self.width else x_val
-                widget.y = int(y) + 1  # Convert 0-based to 1-based
-                widget.text = text
-                logger.info(f"Widget updated: {screen_id}.{widget_id} at ({widget.x},{widget.y}) = '{text}'")
-                
-                # Trigger display update callback
-                self._notify_update()
+            if not match:
+                # Try format without text (just position)
+                match = re.match(r'widget_set (\S+) (\S+) (\d+) (\d+)$', command)
+                if match:
+                    screen_id, widget_id, x_param, y = match.groups()
+                    text = ""  # Empty text for position-only updates
+                else:
+                    logger.warning(f"Could not parse widget_set command: {command}")
+                    return 'success'
             else:
-                logger.warning(f"Could not parse widget_set command: {command}")
+                screen_id, widget_id, x_param, y, text = match.groups()
+            
+            # Auto-create screen if it doesn't exist
+            if screen_id not in self.screens:
+                logger.debug(f"Auto-creating screen '{screen_id}'")
+                self.screens[screen_id] = LCDScreen()
+                if not self.active_screen:
+                    self.active_screen = screen_id
+            
+            # Auto-create widget if it doesn't exist
+            if widget_id not in self.screens[screen_id].widgets:
+                logger.debug(f"Auto-creating widget '{screen_id}.{widget_id}'")
+                self.screens[screen_id].widgets[widget_id] = LCDWidget(type='string')
+            
+            widget = self.screens[screen_id].widgets[widget_id]
+            # If X is very large (like max_int), default to 1 (leftmost)
+            x_val = int(x_param)
+            widget.x = 1 if x_val > self.width else x_val
+            widget.y = int(y) + 1  # Convert 0-based to 1-based
+            if text:  # Only update text if provided
+                widget.text = text
+            logger.debug(f"Widget updated: {screen_id}.{widget_id} at ({widget.x},{widget.y}) = '{text}'")
+            
+            # Trigger display update callback
+            self._notify_update()
             return 'success'
         
         # widget_del <SCR> <WID>
