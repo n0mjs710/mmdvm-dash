@@ -75,7 +75,7 @@ class LogMonitor:
             # Try current log file first
             found_count = await self._scan_for_state(self.path, lookback_lines, state_to_find)
             
-            logger.debug(f"Found {found_count} state items for {self.name}")
+            logger.info(f"Initial scan for {self.name}: found {found_count} state items, still looking for: {[k for k, v in state_to_find.items() if not v]}")
         
         except Exception as e:
             logger.error(f"Error parsing recent entries for {self.name}: {e}")
@@ -188,17 +188,20 @@ class LogMonitor:
             state.update_network_status('P25-MMDVM', True)
             state_to_find['p25_mmdvm_connection'] = True
             found_something = True
+            logger.info(f"Initial scan: Found P25-MMDVM connection")
         
         elif event_type == 'p25_mmdvm_disconnected' and not state_to_find.get('p25_mmdvm_connection'):
             state.update_network_status('P25-MMDVM', False)
             state_to_find['p25_mmdvm_connection'] = True  # Found state (disconnected)
             found_something = True
+            logger.info(f"Initial scan: Found P25-MMDVM disconnected")
         
         elif event_type == 'p25_reflector_linked' and not state_to_find.get('p25_reflector'):
             reflector = entry.data.get('reflector', 'Unknown')
             state.update_network_status('P25-Reflector', True, target=reflector)
             state_to_find['p25_reflector'] = True
             found_something = True
+            logger.info(f"Initial scan: Found P25 reflector connection to {reflector}")
         
         elif event_type == 'p25_network_closing' and not state_to_find.get('p25_reflector'):
             state.update_network_status('P25-Reflector', False)
@@ -209,12 +212,14 @@ class LogMonitor:
             state.update_network_status('YSF-MMDVM', True)
             state_to_find['ysf_mmdvm_connection'] = True
             found_something = True
+            logger.info(f"Initial scan: Found YSF-MMDVM connection")
         
         elif event_type in ['ysf_linked', 'ysf_reconnected'] and not state_to_find.get('ysf_reflector'):
             reflector = entry.data.get('reflector', 'Unknown')
             state.update_network_status('YSF-Reflector', True, reflector)
             state_to_find['ysf_reflector'] = True
             found_something = True
+            logger.info(f"Initial scan: Found YSF reflector connection to {reflector}")
         
         elif event_type == 'ysf_disconnect_requested' and not state_to_find.get('ysf_reflector'):
             state.update_network_status('YSF-Reflector', False)
