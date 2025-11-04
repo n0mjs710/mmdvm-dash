@@ -1,18 +1,13 @@
 # MMDVM Dashboard
 
-⚠️ **DEVELOPMENT STATUS: EARLY TESTING**  
-Basic functionality implemented. Ready for initial testing on target system.
-
----
-
 A lightweight, resource-efficient web-based dashboard for monitoring MMDVMHost and companion gateway programs on single-board computers.
 
 **Designed specifically as a companion for the STM32-DVM-MTR2K MMDVM modem**, but generic enough for any MMDVMHost installation. Focused on the needs of repeater operators, not end users.
 
-![Version](https://img.shields.io/badge/version-0.1.0--dev-orange)
+![Version](https://img.shields.io/badge/version-1.0.0-blue)
 ![Python](https://img.shields.io/badge/python-3.13-blue)
 ![License](https://img.shields.io/badge/license-GPLv3-green)
-![Status](https://img.shields.io/badge/status-in_development-red)
+![Status](https://img.shields.io/badge/status-stable-brightgreen)
 
 ## Features
 
@@ -40,17 +35,16 @@ A lightweight, resource-efficient web-based dashboard for monitoring MMDVMHost a
 - **Virtual Environment**: Required to avoid system Python modifications
 - **Operation**: Pull and start - no complex setup
 
-## Quick Start (When Ready)
+## Quick Start
 
 ```bash
-# ⚠️ NOT READY YET - COMING SOON
 cd ~
 git clone https://github.com/n0mjs710/mmdvm-dash.git
 cd mmdvm-dash
 python3.13 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-python start_dashboard.py
+python run_dashboard.py
 ```
 
 Access at **http://localhost:8080**
