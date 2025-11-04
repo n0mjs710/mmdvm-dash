@@ -1052,19 +1052,18 @@
             const lcdDisplay = document.getElementById('lcdDisplay');
             const status = state.status || {};
             const lcdLines = status.lcd_display || [];
+            const lcdConnected = status.lcd_connected || false;
             
-            // Check if we have actual content (non-empty, non-whitespace lines)
-            const hasContent = lcdLines.length > 0 && lcdLines.some(line => line.trim().length > 0);
-            
-            if (hasContent) {
-                // Display the LCD lines
-                lcdDisplay.innerHTML = lcdLines
-                    .map(line => `<div class="lcd-line">${line.padEnd(20, ' ')}</div>`)
-                    .join('');
-            } else {
-                // No data - show waiting message
+            // Show waiting message if not connected
+            if (!lcdConnected) {
                 lcdDisplay.innerHTML = '<div class="lcd-offline">Waiting for MMDVMHost connection...</div>';
+                return;
             }
+            
+            // Connected - show the LCD lines (even if empty/blank)
+            lcdDisplay.innerHTML = lcdLines
+                .map(line => `<div class="lcd-line">${line.padEnd(20, ' ')}</div>`)
+                .join('');
         }
 
         function updateWebSocketStatus(connected) {

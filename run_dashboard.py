@@ -56,8 +56,8 @@ async def start_monitors():
         lcd_client = LCDprocClient(host=lcd_host, port=lcd_port)
         
         # Set up callback to update state when display changes
-        def on_lcd_update(lines):
-            state.update_lcd_display(lines)
+        def on_lcd_update(lines, connected):
+            state.update_lcd_display(lines, connected)
         
         lcd_client.on_update = on_lcd_update
         await lcd_client.start()

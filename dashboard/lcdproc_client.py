@@ -58,6 +58,7 @@ class LCDprocClient:
         self.screens: Dict[str, LCDScreen] = {}
         self.active_screen: Optional[str] = None
         self.client_name: str = ''
+        self.connected: bool = False  # Track if MMDVMHost is connected
         
         # Connection
         self.server: Optional[asyncio.Server] = None
@@ -65,7 +66,7 @@ class LCDprocClient:
         self.running = False
         
         # Callbacks for state changes
-        self.on_update: Optional[Callable[[List[str]], None]] = None
+        self.on_update: Optional[Callable[[List[str], bool], None]] = None  # (lines, connected)
     
     async def start(self):
         """Start the LCDproc server"""
@@ -175,6 +176,8 @@ class LCDprocClient:
             except:
                 pass
             self.client_writer = None
+            self.connected = False
+            self._notify_update()  # Update display to show waiting message
             logger.info(f"LCDproc client {addr} disconnected")
     
     def _process_command(self, command: str) -> str:
@@ -182,7 +185,8 @@ class LCDprocClient:
         
         # hello - respond with connect string
         if command == 'hello':
-            # Clear the "waiting" message now that client has connected
+            # Mark as connected and clear the "waiting" message
+            self.connected = True
             self._notify_update()
             return f'connect LCDproc 0.5.9 protocol 0.3.1 lcd wid {self.width} hgt {self.height} cellwid 5 cellhgt 8'
         
@@ -350,7 +354,7 @@ class LCDprocClient:
         if self.on_update:
             lines = self.get_display_lines()
             try:
-                self.on_update(lines)
+                self.on_update(lines, self.connected)
             except Exception as e:
                 logger.error(f"Error in update callback: {e}")
     
@@ -396,6 +400,7 @@ class LCDprocClient:
             Dictionary with screens, active_screen, and rendered display lines.
         """
         return {
+            'connected': self.connected,
             'client_name': self.client_name,
             'active_screen': self.active_screen,
             'display_size': {'width': self.width, 'height': self.height},
