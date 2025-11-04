@@ -359,9 +359,12 @@
             font-family: 'Courier New', monospace;
             font-size: 12px;
             line-height: 1.6;
-            max-height: 400px;
+            height: 400px;  /* Default ~20 rows at 1.6 line-height and 12px font */
+            max-height: 800px;
+            min-height: 200px;
             overflow-y: auto;
             color: #94a3b8;
+            resize: vertical;  /* Allow vertical resizing */
         }
         
         .log-line {
@@ -957,6 +960,9 @@
             
             // Update mode
             document.getElementById('currentMode').textContent = state.status.current_mode || 'IDLE';
+            
+            // Update log viewer
+            updateLogViewer();
         }
         
         function updateRepeaterInfo() {
@@ -1018,6 +1024,33 @@
             } else {
                 el.textContent = '✗ Disconnected';
                 el.className = 'connection-status disconnected';
+            }
+        }
+
+        async function updateLogViewer() {
+            try {
+                const response = await fetch('/api/logs?limit=50');
+                const data = await response.json();
+                const logViewer = document.getElementById('logViewer');
+                
+                if (data.logs && data.logs.length > 0) {
+                    // Remember scroll position
+                    const wasAtBottom = logViewer.scrollHeight - logViewer.scrollTop === logViewer.clientHeight;
+                    
+                    // Update log content
+                    logViewer.innerHTML = data.logs
+                        .map(entry => `<div class="log-line">${entry.line}</div>`)
+                        .join('');
+                    
+                    // Auto-scroll to bottom if we were already at the bottom
+                    if (wasAtBottom) {
+                        logViewer.scrollTop = logViewer.scrollHeight;
+                    }
+                } else {
+                    logViewer.innerHTML = '<div class="log-line">No log data available</div>';
+                }
+            } catch (error) {
+                console.error('Failed to load logs:', error);
             }
         }
 
