@@ -120,34 +120,43 @@ class LCDprocClient:
         self.client_writer = writer
         
         try:
-            # Send greeting
-            greeting = f"connect LCDproc 0.5.9 protocol 0.3.1 lcd wid {self.width} hgt {self.height} cellwid 5 cellhgt 8\n"
+            # Send greeting with null terminator (LCDproc protocol)
+            greeting = f"connect LCDproc 0.5.9 protocol 0.3.1 lcd wid {self.width} hgt {self.height} cellwid 5 cellhgt 8\x00"
             writer.write(greeting.encode('utf-8'))
             await writer.drain()
+            logger.debug(f"Sent greeting to {addr}")
             
-            # Process commands
+            # Process commands - LCDproc uses null-terminated strings
+            buffer = b''
             while self.running:
                 try:
-                    line = await asyncio.wait_for(reader.readline(), timeout=60.0)
-                    if not line:
+                    # Read data in chunks
+                    chunk = await asyncio.wait_for(reader.read(1024), timeout=60.0)
+                    if not chunk:
                         break
                     
-                    # Decode, handling null terminators and stripping whitespace
-                    try:
-                        command = line.decode('utf-8', errors='ignore').strip('\x00\r\n ')
-                    except:
-                        logger.warning(f"Could not decode command: {line.hex()}")
-                        continue
+                    buffer += chunk
                     
-                    if not command:
-                        continue
-                    
-                    logger.debug(f"Received command: {command}")
-                    response = self._process_command(command)
-                    
-                    # Send response with null terminator (LCDproc protocol)
-                    writer.write(f"{response}\n".encode('utf-8'))
-                    await writer.drain()
+                    # Process all complete commands (null-terminated)
+                    while b'\x00' in buffer:
+                        command_bytes, buffer = buffer.split(b'\x00', 1)
+                        
+                        # Decode command
+                        try:
+                            command = command_bytes.decode('utf-8', errors='ignore').strip()
+                        except Exception as e:
+                            logger.warning(f"Could not decode command: {command_bytes.hex()}")
+                            continue
+                        
+                        if not command:
+                            continue
+                        
+                        logger.debug(f"Received command: {command}")
+                        response = self._process_command(command)
+                        
+                        # Send response with null terminator (LCDproc protocol)
+                        writer.write(f"{response}\x00".encode('utf-8'))
+                        await writer.drain()
                     
                 except asyncio.TimeoutError:
                     # Send keepalive check
