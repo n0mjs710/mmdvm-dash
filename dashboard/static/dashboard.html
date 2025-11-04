@@ -1053,14 +1053,17 @@
             const status = state.status || {};
             const lcdLines = status.lcd_display || [];
             
-            if (lcdLines && lcdLines.length > 0) {
+            // Check if we have actual content (non-empty, non-whitespace lines)
+            const hasContent = lcdLines.length > 0 && lcdLines.some(line => line.trim().length > 0);
+            
+            if (hasContent) {
                 // Display the LCD lines
                 lcdDisplay.innerHTML = lcdLines
                     .map(line => `<div class="lcd-line">${line.padEnd(20, ' ')}</div>`)
                     .join('');
             } else {
-                // No data
-                lcdDisplay.innerHTML = '<div class="lcd-offline">LCDproc not configured or no data...</div>';
+                // No data - show waiting message
+                lcdDisplay.innerHTML = '<div class="lcd-offline">Waiting for MMDVMHost connection...</div>';
             }
         }
 
