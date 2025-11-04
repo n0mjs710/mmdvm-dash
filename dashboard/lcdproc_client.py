@@ -250,21 +250,39 @@ class LCDprocClient:
             return 'success'
         
         # widget_set <SCR> <WID> <X> <Y> "<TEXT>"
+        # MMDVMHost sends: widget_set Status Time 2147483644 0 "10:57:39 AM"
+        # Format appears to be: screen widget left top "text"
+        # The large left value (2147483644) seems to be max_int, use 1 for leftmost position
         elif command.startswith('widget_set '):
-            # Parse: widget_set scr1 l1 1 1 "DMR  →  BM 3120"
+            # Try format with 5 params first (screen, widget, left, top, text)
             match = re.match(r'widget_set (\S+) (\S+) (\d+) (\d+) "(.*)"', command)
             if match:
-                screen_id, widget_id, x, y, text = match.groups()
-                if screen_id in self.screens:
-                    widget = self.screens[screen_id].widgets.get(widget_id)
-                    if widget:
-                        widget.x = int(x)
-                        widget.y = int(y)
-                        widget.text = text
-                        logger.debug(f"Widget updated: {screen_id}.{widget_id} = '{text}'")
-                        
-                        # Trigger display update callback
-                        self._notify_update()
+                screen_id, widget_id, x_param, y, text = match.groups()
+                
+                # Auto-create screen if it doesn't exist
+                if screen_id not in self.screens:
+                    logger.info(f"Auto-creating screen '{screen_id}' from widget_set")
+                    self.screens[screen_id] = LCDScreen()
+                    if not self.active_screen:
+                        self.active_screen = screen_id
+                
+                # Auto-create widget if it doesn't exist
+                if widget_id not in self.screens[screen_id].widgets:
+                    logger.info(f"Auto-creating widget '{widget_id}' in screen '{screen_id}'")
+                    self.screens[screen_id].widgets[widget_id] = LCDWidget(type='string')
+                
+                widget = self.screens[screen_id].widgets[widget_id]
+                # If X is very large (like max_int), default to 1 (leftmost)
+                x_val = int(x_param)
+                widget.x = 1 if x_val > self.width else x_val
+                widget.y = int(y) + 1  # Convert 0-based to 1-based
+                widget.text = text
+                logger.info(f"Widget updated: {screen_id}.{widget_id} at ({widget.x},{widget.y}) = '{text}'")
+                
+                # Trigger display update callback
+                self._notify_update()
+            else:
+                logger.warning(f"Could not parse widget_set command: {command}")
             return 'success'
         
         # widget_del <SCR> <WID>
