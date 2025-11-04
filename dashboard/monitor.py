@@ -5,9 +5,9 @@ Watches log files for changes and parses new entries
 import asyncio
 import aiofiles
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from .parsers import get_parser
 from .state import state, Transmission
@@ -66,29 +66,57 @@ class LogMonitor:
         """Parse recent log entries to establish current state on startup
         
         Scans backwards through logs looking for current state only.
-        Stops processing each type of information once found.
+        Checks up to 5 days back, stopping when all state is found.
+        Items not found after 5 days are marked as 'unknown'.
         """
         try:
             # Define what state we're looking for based on log type
             state_to_find = self._get_state_targets()
+            found_count = 0
             
-            # Try current log file first
-            found_count = await self._scan_for_state(self.path, lookback_lines, state_to_find)
-            
-            # If we didn't find everything, try yesterday's log
-            if not all(state_to_find.values()):
-                yesterday = self.path.parent / self.path.name.replace(
+            # Try current day and up to 4 previous days (5 days total)
+            for days_back in range(5):
+                if all(state_to_find.values()):
+                    break  # Found everything, stop scanning
+                
+                # Calculate the date for this iteration
+                scan_date = datetime.now() - timedelta(days=days_back)
+                log_file = self.path.parent / self.path.name.replace(
                     datetime.now().strftime('%Y-%m-%d'),
-                    (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+                    scan_date.strftime('%Y-%m-%d')
                 )
-                if yesterday.exists():
-                    logger.debug(f"Scanning yesterday's log for remaining state: {yesterday}")
-                    found_count += await self._scan_for_state(yesterday, lookback_lines, state_to_find)
+                
+                if not log_file.exists():
+                    logger.debug(f"Log file not found: {log_file}")
+                    continue
+                
+                day_label = "today" if days_back == 0 else f"{days_back} day(s) ago"
+                logger.debug(f"Scanning {day_label} log for {self.name}: {log_file}")
+                found_count += await self._scan_for_state(log_file, lookback_lines, state_to_find)
             
-            logger.info(f"Initial scan for {self.name}: found {found_count} state items, still looking for: {[k for k, v in state_to_find.items() if not v]}")
+            # Mark any remaining unfound items as 'unknown'
+            unfound = [k for k, v in state_to_find.items() if not v]
+            if unfound:
+                logger.warning(f"Could not find state for {self.name} after 5-day scan: {unfound}")
+                await self._mark_unknown_state(unfound)
+            
+            logger.info(f"Initial scan for {self.name}: found {found_count} state items, marked {len(unfound)} as unknown")
         
         except Exception as e:
             logger.error(f"Error parsing recent entries for {self.name}: {e}")
+    
+    async def _mark_unknown_state(self, unfound_items: List[str]):
+        """Mark state items as unknown when they can't be found in logs"""
+        from dashboard.state import state
+        
+        # Mark network states as unknown
+        if 'dmr_network_connection' in unfound_items:
+            # Mark all DMR networks as unknown
+            pass  # Will be handled when we update state management
+        if 'ysf_reflector' in unfound_items:
+            state.update_network_status('YSF-Reflector', 'unknown')
+        if 'p25_reflector' in unfound_items:
+            state.update_network_status('P25-Reflector', 'unknown')
     
     def _get_state_targets(self) -> Dict[str, bool]:
         """Get the state information we need to find for this log type"""
@@ -101,13 +129,10 @@ class LogMonitor:
         if 'DMRGateway' in self.name:
             targets['dmr_mmdvm_connection'] = False
             targets['dmr_network_connection'] = False
-        # TODO: Re-enable when we have confirmed patterns for YSF/P25
-        # elif 'P25Gateway' in self.name:
-        #     targets['p25_mmdvm_connection'] = False
-        #     targets['p25_reflector'] = False
-        # elif 'YSFGateway' in self.name:
-        #     targets['ysf_mmdvm_connection'] = False
-        #     targets['ysf_reflector'] = False
+        elif 'P25Gateway' in self.name:
+            targets['p25_reflector'] = False
+        elif 'YSFGateway' in self.name:
+            targets['ysf_reflector'] = False
         
         return targets
     
@@ -195,49 +220,26 @@ class LogMonitor:
             state_to_find['dmr_network_connection'] = True  # Found state (disconnected)
             found_something = True
         
-        # TODO: P25 initial scan - DISABLED until we have confirmed patterns
-        # elif event_type == 'p25_mmdvm_connected' and not state_to_find.get('p25_mmdvm_connection'):
-        #     state.update_network_status('P25-MMDVM', True)
-        #     state_to_find['p25_mmdvm_connection'] = True
-        #     found_something = True
-        #     logger.info(f"Initial scan: Found P25-MMDVM connection")
+        # P25 initial scan
+        elif event_type == 'p25_reflector_linked' and not state_to_find.get('p25_reflector'):
+            reflector = entry.data.get('reflector', 'Unknown')
+            state.update_network_status('Network', True, reflector)
+            state_to_find['p25_reflector'] = True
+            found_something = True
+            logger.info(f"Initial scan: Found P25 reflector {reflector}")
         
-        # elif event_type == 'p25_mmdvm_disconnected' and not state_to_find.get('p25_mmdvm_connection'):
-        #     state.update_network_status('P25-MMDVM', False)
-        #     state_to_find['p25_mmdvm_connection'] = True
-        #     found_something = True
-        #     logger.info(f"Initial scan: Found P25-MMDVM disconnected")
+        # YSF initial scan
+        elif event_type == 'ysf_reflector_linked' and not state_to_find.get('ysf_reflector'):
+            reflector = entry.data.get('reflector', 'Unknown')
+            state.update_network_status('YSF Network', True, reflector)
+            state_to_find['ysf_reflector'] = True
+            found_something = True
+            logger.info(f"Initial scan: Found YSF reflector {reflector}")
         
-        # elif event_type == 'p25_reflector_linked' and not state_to_find.get('p25_reflector'):
-        #     reflector = entry.data.get('reflector', 'Unknown')
-        #     state.update_network_status('P25-Reflector', True, target=reflector)
-        #     state_to_find['p25_reflector'] = True
-        #     found_something = True
-        #     logger.info(f"Initial scan: Found P25 reflector connection to {reflector}")
-        
-        # elif event_type == 'p25_network_closing' and not state_to_find.get('p25_reflector'):
-        #     state.update_network_status('P25-Reflector', False)
-        #     state_to_find['p25_reflector'] = True
-        #     found_something = True
-        
-        # TODO: YSF initial scan - DISABLED until we have confirmed patterns
-        # elif event_type == 'ysf_mmdvm_connected' and not state_to_find.get('ysf_mmdvm_connection'):
-        #     state.update_network_status('YSF-MMDVM', True)
-        #     state_to_find['ysf_mmdvm_connection'] = True
-        #     found_something = True
-        #     logger.info(f"Initial scan: Found YSF-MMDVM connection")
-        
-        # elif event_type in ['ysf_linked', 'ysf_reconnected'] and not state_to_find.get('ysf_reflector'):
-        #     reflector = entry.data.get('reflector', 'Unknown')
-        #     state.update_network_status('YSF-Reflector', True, reflector)
-        #     state_to_find['ysf_reflector'] = True
-        #     found_something = True
-        #     logger.info(f"Initial scan: Found YSF reflector connection to {reflector}")
-        
-        # elif event_type == 'ysf_disconnect_requested' and not state_to_find.get('ysf_reflector'):
-        #     state.update_network_status('YSF-Reflector', False)
-        #     state_to_find['ysf_reflector'] = True
-        #     found_something = True
+        elif event_type == 'ysf_network_disconnected' and not state_to_find.get('ysf_reflector'):
+            state.update_network_status('YSF Network', False)
+            state_to_find['ysf_reflector'] = True  # Found state (disconnected)
+            found_something = True
         
         return found_something
     
@@ -303,64 +305,24 @@ class LogMonitor:
         elif event_type == 'network_disconnected':
             state.update_network_status(entry.data['network'], False)
         
-        # TODO: YSF Gateway events - DISABLED until we have confirmed patterns
-        # When re-enabling, these events should:
-        # - ysf_linked: Set YSF-Reflector=True with reflector name
-        # - ysf_reconnected: Set YSF-Reflector=True with reflector name  
-        # - ysf_mmdvm_connected: Set YSF-MMDVM=True
-        # - ysf_disconnect_requested: Set YSF-Reflector=False
-        # - ysf_link_failed: Set YSF-Reflector=False
+        # YSF Gateway events (CONFIRMED PATTERNS)
+        elif event_type == 'ysf_reflector_linked':
+            # YSF connected to reflector (network and reflector are the same thing)
+            reflector = entry.data.get('reflector', 'Unknown')
+            state.update_network_status('YSF Network', True, reflector)
+            log_fn(f"YSF linked to reflector: {reflector}")
         
-        # elif event_type == 'ysf_linked':
-        #     reflector = entry.data.get('reflector', 'Unknown')
-        #     state.update_network_status('YSF-Reflector', True, reflector)
-        #     log_fn(f"YSF linked to reflector: {reflector}")
+        elif event_type == 'ysf_network_disconnected':
+            # YSF network/reflector disconnected (they're the same)
+            state.update_network_status('YSF Network', False)
+            log_fn("YSF network/reflector disconnected")
         
-        # elif event_type == 'ysf_reconnected':
-        #     reflector = entry.data.get('reflector', 'Unknown')
-        #     state.update_network_status('YSF-Reflector', True, reflector)
-        #     log_fn(f"YSF reconnected to reflector: {reflector}")
-        
-        # elif event_type == 'ysf_mmdvm_connected':
-        #     state.update_network_status('YSF-MMDVM', True)
-        #     log_fn("YSF Gateway connected to MMDVM")
-        
-        # elif event_type == 'ysf_disconnect_requested':
-        #     state.update_network_status('YSF-Reflector', False)
-        #     log_fn("YSF disconnect requested")
-        
-        # elif event_type == 'ysf_link_failed':
-        #     state.update_network_status('YSF-Reflector', False)
-        #     log_fn("YSF link failed (polls lost)")
-        
-        # TODO: P25 Gateway events - DISABLED until we have confirmed patterns
-        # When re-enabling, these events should:
-        # - p25_mmdvm_connected: Set P25-MMDVM=True
-        # - p25_mmdvm_disconnected: Set P25-MMDVM=False
-        # - p25_reflector_linked: Set P25-Reflector=True with reflector number
-        # - p25_network_closing: Set P25-Reflector=False
-        # - p25_connection_lost: Set P25-Reflector=False
-        
-        # elif event_type == 'p25_mmdvm_connected':
-        #     state.update_network_status('P25-MMDVM', True)
-        #     log_fn("P25 Gateway connected to MMDVM")
-        
-        # elif event_type == 'p25_mmdvm_disconnected':
-        #     state.update_network_status('P25-MMDVM', False)
-        #     log_fn("P25 Gateway disconnected from MMDVM")
-        
-        # elif event_type == 'p25_reflector_linked':
-        #     reflector = entry.data.get('reflector', 'Unknown')
-        #     state.update_network_status('P25-Reflector', True, target=reflector)
-        #     log_fn(f"P25 Gateway linked to reflector: {reflector}")
-        
-        # elif event_type == 'p25_network_closing':
-        #     state.update_network_status('P25-Reflector', False)
-        #     log_fn("P25 network closing")
-        
-        # elif event_type == 'p25_connection_lost':
-        #     state.update_network_status('P25-Reflector', False)
-        #     log_fn("P25 connection lost (recvfrom error)")
+        # P25 Gateway events (CONFIRMED PATTERNS)
+        elif event_type == 'p25_reflector_linked':
+            # P25 linked to reflector (assume connected, can't verify)
+            reflector = entry.data.get('reflector', 'Unknown')
+            state.update_network_status('Network', True, reflector)
+            log_fn(f"P25 statically linked to reflector: {reflector}")
         
         # DMR Gateway events (WORKING - DO NOT MODIFY)
         elif event_type == 'dmr_mmdvm_connected':

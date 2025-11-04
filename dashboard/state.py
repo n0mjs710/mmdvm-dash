@@ -111,27 +111,30 @@ class DashboardState:
         # Immediate broadcast for mode changes (critical for responsive UI)
         asyncio.create_task(self.broadcast_status_update())
     
-    def update_network_status(self, network: str, connected: bool, target: str = None):
+    def update_network_status(self, network: str, connected, target: str = None):
         """Update network connection status
         
         Args:
             network: Network name (e.g., 'YSF', 'DMR', 'P25')
-            connected: Whether the network is connected
+            connected: Connection state - True (connected), False (disconnected), or 'unknown'
             target: Optional target/reflector name (e.g., 'Kansas' for YSF reflector, '3120' for P25)
         """
-        # Store the target (reflector name/number) if connected, otherwise False
-        if connected and target:
+        # Store the state based on type:
+        # - String (reflector name): connected with target
+        # - True: connected without specific target
+        # - False: disconnected
+        # - 'unknown': state could not be determined
+        if connected == 'unknown':
+            self.status.networks[network] = 'unknown'
+            message = f'{network} status unknown (not found in recent logs)'
+        elif connected and target:
             self.status.networks[network] = target
-        else:
-            self.status.networks[network] = connected
-        
-        self.status.last_update = datetime.now().timestamp()
-        
-        # Build message with target if provided
-        if target and connected:
             message = f'{network} connected to {target}'
         else:
+            self.status.networks[network] = connected
             message = f'{network} {"connected" if connected else "disconnected"}'
+        
+        self.status.last_update = datetime.now().timestamp()
         
         event = Event(
             timestamp=self.status.last_update,
