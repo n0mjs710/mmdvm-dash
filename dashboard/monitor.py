@@ -22,9 +22,12 @@ class LogMonitor:
     def __init__(self, name: str, path: str, parser_type: str):
         self.name = name
         self.path = Path(path)
+        self.original_pattern = path  # Store original path pattern for rotation detection
         self.parser = get_parser(parser_type)
         self.last_position = 0
         self.running = False
+        # Use UTC since MMDVM logs use UTC timestamps regardless of server timezone
+        self.last_check_time = datetime.utcnow()
         
         if self.parser is None:
             logger.warning(f"No parser available for {name} (type: {parser_type})")
@@ -243,14 +246,55 @@ class LogMonitor:
         
         return found_something
     
-    async def check_for_updates(self):
-        """Check for new log entries"""
+    async def _check_log_rotation(self):
+        """Check if a new daily log file has been created and switch to it"""
         try:
+            # Extract the base pattern (remove the date part)
+            path_str = str(self.path)
+            
+            # Check if path contains a date pattern (YYYY-MM-DD)
+            import re
+            date_match = re.search(r'(\d{4}-\d{2}-\d{2})', path_str)
+            if not date_match:
+                return  # Not a dated log file, nothing to do
+            
+            # Build today's log file path (use UTC since MMDVM uses UTC)
+            old_date = date_match.group(1)
+            today_date = datetime.utcnow().strftime('%Y-%m-%d')
+            
+            if old_date == today_date:
+                return  # Already on today's file
+            
+            # Generate new path with today's date
+            new_path = Path(path_str.replace(old_date, today_date))
+            
+            if new_path.exists():
+                logger.info(f"Switching {self.name} from {self.path.name} to {new_path.name}")
+                self.path = new_path
+                self.last_position = 0  # Start reading from beginning of new file
+            
+        except Exception as e:
+            logger.error(f"Error checking log rotation for {self.name}: {e}")
+    
+    async def check_for_updates(self):
+        """Check for new log entries and handle daily log rotation"""
+        try:
+            # Check for daily log rotation (every 60 seconds, use UTC since MMDVM uses UTC)
+            now = datetime.utcnow()
+            if (now - self.last_check_time).total_seconds() > 60:
+                self.last_check_time = now
+                await self._check_log_rotation()
+            
+            # Check if current file still exists
+            if not self.path.exists():
+                logger.warning(f"Log file disappeared: {self.path}")
+                return
+            
             current_size = self.path.stat().st_size
             
-            # Check if file was rotated (size decreased)
+            # Check if file was rotated (size decreased) - unlikely with dated files
             if current_size < self.last_position:
-                logger.info(f"Log file rotated for {self.name}")
+                logger.info(f"Log file size decreased for {self.name}, resetting position")
                 self.last_position = 0
             
             if current_size == self.last_position:
