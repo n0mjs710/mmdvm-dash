@@ -48,8 +48,7 @@ mmdvm-dash/
 - **DashboardState**: Central state container
   - System status (mode, modem, networks)
   - Active transmissions
-  - Recent calls history
-  - Event log
+  - Log buffer for live viewer
   - Statistics (daily calls, users, modes)
 
 ### 3. Log Monitor (`dashboard/monitor.py`)
@@ -65,11 +64,11 @@ mmdvm-dash/
 
 ### 4. FastAPI Server (`dashboard/server.py`)
 - REST API endpoints:
-  - `/api/config` - Dashboard configuration
   - `/api/status` - System status
-  - `/api/transmissions` - Active and recent calls
-  - `/api/events` - Event history
+  - `/api/transmissions` - Active transmissions
   - `/api/stats` - Statistics
+  - `/api/logs` - Recent log entries
+  - `/api/config/viewer` - Log viewer configuration
   
 - WebSocket endpoint:
   - `/ws` - Real-time updates
@@ -89,8 +88,7 @@ mmdvm-dash/
   
 - **Activity Monitoring**:
   - Active transmissions (live)
-  - Recent calls history
-  - Event log
+  - Live log viewer
   - Network status
 
 ## Supported Digital Modes
@@ -142,14 +140,11 @@ pip install -r requirements.txt
 nano config/config.json
 ```
 
-Set log file paths:
+Configure paths to your INI files and log locations:
 ```json
 {
-  "log_files": {
-    "mmdvmhost": {
-      "enabled": true,
-      "path": "/var/log/mmdvm/MMDVMHost.log"
-    }
+  "config_paths": {
+    "mmdvm_ini": "/etc/MMDVM.ini"
   }
 }
 ```
@@ -164,75 +159,76 @@ Open http://localhost:8080 in your browser
 
 ## Testing Without MMDVMHost
 
-Use the test log generator:
+The dashboard automatically reads log file paths from your MMDVM.ini file.
+For testing, you can create a test INI file pointing to test logs.
 
-```bash
-# Terminal 1: Generate test logs
-python test_log_generator.py
-```
-
-This creates logs at `/tmp/mmdvm-test-logs/MMDVMHost.log`
-
-Update `config/config.json`:
+Create a test config:
 ```json
 {
-  "log_files": {
-    "mmdvmhost": {
-      "enabled": true,
-      "path": "/tmp/mmdvm-test-logs/MMDVMHost.log"
-    }
+  "config_paths": {
+    "mmdvm_ini": "/tmp/test-MMDVM.ini"
   }
 }
 ```
 
+Create test INI file at `/tmp/test-MMDVM.ini`:
+```ini
+[Log]
+FilePath=/tmp/mmdvm-test-logs/
+FileRoot=MMDVM
+```
+
 ```bash
-# Terminal 2: Run dashboard
+# Run dashboard
 python start_dashboard.py
 ```
 
 ## Configuration Options
 
-### Dashboard Settings
+### Complete Configuration Example
 ```json
 {
   "dashboard": {
-    "title": "MMDVM Dashboard",
-    "description": "Amateur Radio Digital Voice Monitor",
     "host": "0.0.0.0",
-    "port": 8080,
-    "refresh_interval": 1000
-  }
-}
-```
-
-### Log File Configuration
-```json
-{
-  "log_files": {
-    "mmdvmhost": {
-      "enabled": true,
-      "path": "/var/log/mmdvm/MMDVMHost.log",
-      "max_lines": 1000
-    },
-    "dmrgateway": {
-      "enabled": false,
-      "path": "/var/log/mmdvm/DMRGateway.log",
-      "max_lines": 1000
-    }
-  }
-}
-```
-
-### Monitoring Settings
-```json
-{
+    "port": 8080
+  },
+  "config_paths": {
+    "mmdvm_ini": "/etc/MMDVM.ini",
+    "dmr_gateway_ini": "/etc/DMRGateway.ini",
+    "ysf_gateway_ini": "/etc/YSFGateway.ini",
+    "p25_gateway_ini": "/etc/P25Gateway.ini"
+  },
+  "process_names": {
+    "mmdvmhost": "mmdvmhost",
+    "dmrgateway": "dmrgateway",
+    "ysfgateway": "ysfgateway",
+    "p25gateway": "p25gateway",
+    "nxdngateway": "nxdngateway"
+  },
   "monitoring": {
-    "max_recent_calls": 50,
-    "max_events": 100,
-    "activity_timeout": 300
+    "log_buffer_size": 50,
+    "log_viewer_rows": 20
   }
 }
 ```
+
+### Configuration Parameters
+
+**dashboard**
+- `host`: IP address to bind to (default: "0.0.0.0")
+- `port`: Port to listen on (default: 8080)
+
+**config_paths**
+- INI file paths for MMDVMHost and gateways
+- Used to read configuration and determine log file locations
+
+**process_names**
+- Process names to monitor for running status
+- Must match the actual process names on your system
+
+**monitoring**
+- `log_buffer_size`: Number of log lines to keep in memory (default: 50)
+- `log_viewer_rows`: Number of rows visible in log viewer (default: 20)
 
 ## Log Format Reference
 
@@ -293,15 +289,17 @@ Optimized for running alongside MMDVMHost on resource-constrained SBCs.
 
 ## Troubleshooting
 
-### Dashboard shows "Disconnected"
-1. Check log file paths in `config/config.json`
-2. Verify log files exist and are readable
-3. Check server logs for errors
+### Dashboard shows "Disconnected" or "Not running"
+1. Check INI file paths in `config/config.json` (`config_paths` section)
+2. Verify INI files exist and contain valid log file paths
+3. Check that log files exist and are readable
+4. Check server logs for errors
 
 ### No transmissions appearing
 1. Verify log file format matches expected patterns
 2. Check that MMDVMHost is actively logging
-3. Enable debug mode to see parser output
+3. Ensure log files are being rotated with UTC date format
+4. Enable debug mode to see parser output
 
 ### WebSocket fails to connect
 1. Check firewall settings

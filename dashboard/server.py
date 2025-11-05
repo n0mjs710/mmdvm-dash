@@ -42,16 +42,7 @@ async def get_status():
 async def get_transmissions():
     """Get active transmissions"""
     return {
-        "active": state.get_active_transmissions(),
-        "recent": state.get_recent_calls(20)
-    }
-
-
-@app.get("/api/events")
-async def get_events(limit: int = 50):
-    """Get recent events"""
-    return {
-        "events": state.get_events(limit)
+        "active": state.get_active_transmissions()
     }
 
 
@@ -79,10 +70,24 @@ async def get_logs(limit: int = 50):
         "count": len(logs)
     }
 
+@app.get("/api/config/viewer")
+async def get_viewer_config():
+    """Get configuration for the log viewer"""
+    monitoring_config = config.config.get("monitoring", {})
+    return {
+        "log_viewer_rows": monitoring_config.get("log_viewer_rows", 20)
+    }
+
 # WebSocket endpoint
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    """WebSocket connection for real-time updates"""
+    """WebSocket connection for real-time updates
+    
+    SECURITY NOTE: All data sent through this WebSocket is visible to web clients.
+    The state.get_status() method filters out sensitive information like passwords,
+    IP addresses, and port numbers. Only public repeater information and operational
+    status is transmitted.
+    """
     await websocket.accept()
     state.websocket_clients.add(websocket)
     logger.info(f"WebSocket client connected (total: {len(state.websocket_clients)})")
@@ -92,9 +97,7 @@ async def websocket_endpoint(websocket: WebSocket):
         await websocket.send_json({
             'type': 'initial_state',
             'status': state.get_status(),
-            'active_transmissions': state.get_active_transmissions(),
-            'recent_calls': state.get_recent_calls(10),
-            'events': state.get_events(20)
+            'active_transmissions': state.get_active_transmissions()
         })
         
         # Keep connection alive and handle incoming messages

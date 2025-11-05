@@ -196,7 +196,12 @@ class MMDVMConfig:
         }
     
     def get_info(self) -> Dict:
-        """Get station info from [General] and [Info] sections"""
+        """Get station info from [General] and [Info] sections
+        
+        SECURITY NOTE: This data is exposed to web clients. Only return public
+        repeater information suitable for display on a public dashboard.
+        DO NOT include sensitive data like passwords, IPs, or port numbers.
+        """
         info = {}
         
         # Get callsign and DMR ID from [General] section

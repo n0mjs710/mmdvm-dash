@@ -359,7 +359,7 @@
             font-family: 'SF Mono', 'Monaco', 'Consolas', 'Ubuntu Mono', 'Roboto Mono', monospace;
             font-size: 13px;
             line-height: 1.6;
-            height: 400px;  /* Default ~20 rows at 1.6 line-height and 13px font */
+            /* height set dynamically by JavaScript based on config */
             max-height: 800px;
             min-height: 200px;
             overflow-y: auto;
@@ -517,8 +517,6 @@
         const state = {
             status: {},
             transmissions: [],
-            recentCalls: [],
-            events: [],
             config: {},
             currentMode: 'IDLE',
             activeTransmissions: new Set()  // Track which modes have active transmissions
@@ -563,8 +561,6 @@
             if (data.type === 'initial_state' || data.type === 'state_update') {
                 state.status = data.status || {};
                 state.transmissions = data.active_transmissions || [];
-                state.recentCalls = data.recent_calls || [];
-                state.events = data.events || [];
                 
                 // Update active transmissions set
                 state.activeTransmissions.clear();
@@ -1047,7 +1043,30 @@
             }
         }
 
+        async function initLogViewer() {
+            try {
+                // Fetch viewer configuration
+                const response = await fetch('/api/config/viewer');
+                const config = await response.json();
+                
+                // Calculate height based on configured rows
+                // Line height is 1.6, font size is 13px, plus padding
+                const lineHeight = 13 * 1.6; // ~20.8px per line
+                const rows = config.log_viewer_rows || 20;
+                const padding = 24; // 12px top + 12px bottom
+                const calculatedHeight = (lineHeight * rows) + padding;
+                
+                // Set the log viewer height
+                const logViewer = document.getElementById('logViewer');
+                logViewer.style.height = `${calculatedHeight}px`;
+                
+            } catch (error) {
+                console.error('Failed to load viewer config:', error);
+            }
+        }
+
         // Initialize
+        initLogViewer();
         connectWebSocket();
     </script>
 </body>

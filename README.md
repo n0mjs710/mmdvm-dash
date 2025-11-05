@@ -71,8 +71,8 @@ Since MMDVMHost doesn't provide an API, this dashboard monitors log files in rea
 
 - 📡 Current operating mode (DMR, D-Star, YSF, P25, NXDN, FM)
 - 📞 Active transmissions with callsigns and talkgroups
-- 📋 Recent call history
 - 🌍 Network connections
+- 📋 Live log viewer
 
 ## Documentation
 
@@ -85,18 +85,24 @@ Since MMDVMHost doesn't provide an API, this dashboard monitors log files in rea
 ```json
 {
   "dashboard": {
-    "title": "MMDVM Dashboard",
+    "host": "0.0.0.0",
     "port": 8080
   },
-  "log_files": {
-    "mmdvmhost": {
-      "enabled": true,
-      "path": "/var/log/mmdvm/MMDVMHost.log"
-    },
-    "dmrgateway": {
-      "enabled": true,
-      "path": "/var/log/mmdvm/DMRGateway.log"
-    }
+  "config_paths": {
+    "mmdvm_ini": "/etc/MMDVM.ini",
+    "dmr_gateway_ini": "/etc/DMRGateway.ini",
+    "ysf_gateway_ini": "/etc/YSFGateway.ini",
+    "p25_gateway_ini": "/etc/P25Gateway.ini"
+  },
+  "process_names": {
+    "mmdvmhost": "mmdvmhost",
+    "dmrgateway": "dmrgateway",
+    "ysfgateway": "ysfgateway",
+    "p25gateway": "p25gateway"
+  },
+  "monitoring": {
+    "log_buffer_size": 50,
+    "log_viewer_rows": 20
   }
 }
 ```

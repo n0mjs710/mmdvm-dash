@@ -14,7 +14,13 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class SystemStatus:
-    """Overall system status"""
+    """Overall system status
+    
+    SECURITY NOTE: This data structure is serialized and sent to web clients via to_dict().
+    Only store public/non-sensitive information here. The 'info' field should only contain
+    public repeater information (callsign, frequency, location, description).
+    DO NOT store passwords, IPs, ports, or other sensitive config data here.
+    """
     current_mode: str = "IDLE"
     modem_connected: bool = False
     modem_description: str = ""
@@ -25,7 +31,7 @@ class SystemStatus:
     mmdvm_running: bool = False
     enabled_modes: List[str] = field(default_factory=list)
     gateways: Dict[str, Dict[str, Any]] = field(default_factory=dict)
-    info: Dict[str, Any] = field(default_factory=dict)  # Repeater info (callsign, location, etc)
+    info: Dict[str, Any] = field(default_factory=dict)  # Repeater info (callsign, location, etc) - PUBLIC ONLY
     
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -63,10 +69,8 @@ class Event:
 class DashboardState:
     """Maintains dashboard state"""
     
-    def __init__(self, max_recent_calls: int = 50, max_events: int = 100, log_buffer_size: int = 50):
+    def __init__(self, log_buffer_size: int = 50):
         self.status = SystemStatus()
-        self.recent_calls: deque = deque(maxlen=max_recent_calls)
-        self.events: deque = deque(maxlen=max_events)
         self.active_transmissions: Dict[str, Transmission] = {}
         self.websocket_clients: Set = set()
         
@@ -162,23 +166,12 @@ class DashboardState:
         key = f"{transmission.mode}_{transmission.slot}_{transmission.source}"
         self.active_transmissions[key] = transmission
         
-        # Add to recent calls
-        self.recent_calls.append(transmission)
-        
         # Update statistics
         self.stats['total_calls_today'] += 1
         mode_stats = self.stats['calls_by_mode'].get(transmission.mode, 0)
         self.stats['calls_by_mode'][transmission.mode] = mode_stats + 1
         self.stats['active_users'].add(transmission.source)
         
-        event = Event(
-            timestamp=transmission.timestamp,
-            event_type='transmission_start',
-            source=transmission.mode.lower(),
-            message=f'{transmission.source} → {transmission.destination} on {transmission.mode}',
-            data=transmission.to_dict()
-        )
-        self.add_event(event)
         logger.debug(f"Transmission: {transmission.source} -> {transmission.destination} ({transmission.mode})")
         
         # Trigger immediate broadcast for transmission events (user wants responsive UI)
@@ -190,15 +183,6 @@ class DashboardState:
             tx = self.active_transmissions[key]
             tx.active = False
             tx.duration = duration
-            
-            event = Event(
-                timestamp=datetime.now().timestamp(),
-                event_type='transmission_end',
-                source=tx.mode.lower(),
-                message=f'{tx.source} → {tx.destination} ended ({duration:.1f}s)',
-                data=tx.to_dict()
-            )
-            self.add_event(event)
             
             del self.active_transmissions[key]
             logger.debug(f"Transmission ended: {tx.source} -> {tx.destination} ({duration:.1f}s)")
@@ -220,10 +204,6 @@ class DashboardState:
         if count > 0:
             self.active_transmissions.clear()
             logger.info(f"Cleared {count} active transmission(s) due to mode change")
-    
-    def add_event(self, event: Event):
-        """Add event to history"""
-        self.events.append(event)
     
     def add_log_entry(self, log_line: str):
         """Add a log line to the ring buffer"""
@@ -359,24 +339,23 @@ class DashboardState:
         
         self._broadcast_task = asyncio.create_task(debounced_broadcast())
     
-    def get_recent_calls(self, limit: int = 10) -> List[Dict[str, Any]]:
-        """Get recent calls"""
-        calls = list(self.recent_calls)
-        calls.reverse()
-        return [call.to_dict() for call in calls[:limit]]
-    
-    def get_events(self, limit: int = 20) -> List[Dict[str, Any]]:
-        """Get recent events"""
-        events = list(self.events)
-        events.reverse()
-        return [event.to_dict() for event in events[:limit]]
-    
     def get_active_transmissions(self) -> List[Dict[str, Any]]:
         """Get active transmissions"""
         return [tx.to_dict() for tx in self.active_transmissions.values()]
     
     def get_status(self) -> Dict[str, Any]:
-        """Get current system status"""
+        """Get current system status
+        
+        SECURITY NOTE: This method is called by the WebSocket endpoint and sent to web clients.
+        Only include public/non-sensitive information. DO NOT include:
+        - IP addresses or hostnames
+        - Port numbers
+        - Passwords, passphrases, or authentication tokens
+        - File paths
+        - Any configuration details that could aid in system exploitation
+        
+        Safe to include: callsign, frequency, location, mode status, network names
+        """
         # Filter network keys to only include base network names (DMR, P25, YSF, etc.)
         # Exclude gateway-specific keys like "DMR-MMDVM", "P25-MMDVM", "DMR-HBlink4"
         base_networks = [net for net in self.status.networks.keys() 
@@ -397,7 +376,5 @@ from .config import config
 
 _monitoring_config = config.get('monitoring', default={})
 state = DashboardState(
-    max_recent_calls=_monitoring_config.get('max_recent_calls', 50),
-    max_events=_monitoring_config.get('max_events', 100),
     log_buffer_size=_monitoring_config.get('log_buffer_size', 50)
 )

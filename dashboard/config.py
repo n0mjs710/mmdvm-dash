@@ -36,9 +36,8 @@ class Config:
                 "nxdngateway": "nxdngateway"
             },
             "monitoring": {
-                "max_recent_calls": 50,
-                "max_events": 100,
-                "log_buffer_size": 50
+                "log_buffer_size": 50,
+                "log_viewer_rows": 20
             }
         }
         
