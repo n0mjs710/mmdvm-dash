@@ -1034,18 +1034,11 @@
                 const logViewer = document.getElementById('logViewer');
                 
                 if (data.logs && data.logs.length > 0) {
-                    // Remember scroll position
-                    const wasAtBottom = logViewer.scrollHeight - logViewer.scrollTop === logViewer.clientHeight;
-                    
-                    // Update log content
+                    // Reverse the logs so newest is at the top
                     logViewer.innerHTML = data.logs
+                        .reverse()
                         .map(entry => `<div class="log-line">${entry.line}</div>`)
                         .join('');
-                    
-                    // Auto-scroll to bottom if we were already at the bottom
-                    if (wasAtBottom) {
-                        logViewer.scrollTop = logViewer.scrollHeight;
-                    }
                 } else {
                     logViewer.innerHTML = '<div class="log-line">No log data available</div>';
                 }
