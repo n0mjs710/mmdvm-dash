@@ -39,7 +39,7 @@ D-Star, NXDN, or POCSAG modes logs needed to implement!
 
 🎯 **Resource Efficiency First**: Optimized for NanoPi NEO and similar low-resource SBCs  
 📊 **Configuration-aware Monitoring**: Reads MMDVM.ini and gateway configs to understand expected state  
-📜 **Multi-Day Log Scanning**: Scans previous days' logs (up to 5 days) to establish baseline state  
+📜 **Multi-Day Log Scanning**: Scans previous days' logs (up to 14 days) to establish baseline state  
 📋 **Live Log Viewer**: Resizable window showing recent log entries  
 💡 **Status Cards**: Mode and network status cards with three-state pills (connected/disconnected/unknown)  
 

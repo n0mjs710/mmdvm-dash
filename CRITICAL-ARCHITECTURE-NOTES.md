@@ -42,20 +42,20 @@ Each gateway card displays ALL stanzas found in the config file with an Enable/E
 ### Network Pills (type='network'):
 - **Light Blue (filled)**: Network connected (tracked from log events)
 - **Dark Blue (filled)**: Network enabled but disconnected
-- **Yellow (filled)**: State unknown (not found in 5-day log scan)
+- **Yellow (filled)**: State unknown (not found in 14-day log scan)
 - **Outlined (empty)**: Disabled in config (Enable=0)
 
 ### Feature Pills (type='feature'):
 - **Dark Blue (filled)**: Feature enabled in config
 - **Outlined (empty)**: Feature disabled in config (Enable=0)
 
-## 5-DAY LOG LOOKBACK
+## 14-DAY LOG LOOKBACK
 
-On dashboard startup or gateway restart:
-1. Scan current day's log for connection events
-2. If not found, check previous day incrementally (up to 5 days back)
-3. Stop searching once connection state found for each network
-4. If state not found after 5 days, mark as 'unknown' (yellow pill)
+On startup, each monitor scans logs backwards to find current state:
+1. Try today's log file first
+2. If not found, check previous day incrementally (up to 14 days back)
+3. Stop as soon as all required state is found (efficient)
+4. If state not found after 14 days, mark as 'unknown' (yellow pill)
 
 This prevents assuming connection state when gateways have been running for days/weeks without reconnection events.
 

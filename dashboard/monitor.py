@@ -69,16 +69,16 @@ class LogMonitor:
         """Parse recent log entries to establish current state on startup
         
         Scans backwards through logs looking for current state only.
-        Checks up to 5 days back, stopping when all state is found.
-        Items not found after 5 days are marked as 'unknown'.
+        Checks up to 14 days back, stopping when all state is found.
+        Items not found after 14 days are marked as 'unknown'.
         """
         try:
             # Define what state we're looking for based on log type
             state_to_find = self._get_state_targets()
             found_count = 0
             
-            # Try current day and up to 4 previous days (5 days total)
-            for days_back in range(5):
+            # Try current day and up to 13 previous days (14 days total)
+            for days_back in range(14):
                 if all(state_to_find.values()):
                     break  # Found everything, stop scanning
                 
@@ -103,7 +103,7 @@ class LogMonitor:
             # Mark any remaining unfound items as 'unknown'
             unfound = [k for k, v in state_to_find.items() if not v]
             if unfound:
-                logger.warning(f"Could not find state for {self.name} after 5-day scan: {unfound}")
+                logger.warning(f"Could not find state for {self.name} after 14-day scan: {unfound}")
                 await self._mark_unknown_state(unfound)
             
             logger.info(f"Initial scan for {self.name}: found {found_count} state items, marked {len(unfound)} as unknown")
