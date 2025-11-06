@@ -82,12 +82,15 @@ class LogMonitor:
                 if all(state_to_find.values()):
                     break  # Found everything, stop scanning
                 
-                # Calculate the date for this iteration
-                scan_date = datetime.now() - timedelta(days=days_back)
-                log_file = self.path.parent / self.path.name.replace(
-                    datetime.now().strftime('%Y-%m-%d'),
-                    scan_date.strftime('%Y-%m-%d')
-                )
+                # Calculate the date for this iteration (use UTC since MMDVM uses UTC)
+                scan_date = datetime.utcnow() - timedelta(days=days_back)
+                date_str = scan_date.strftime('%Y-%m-%d')
+                
+                # Extract the base log file name pattern and construct the dated filename
+                # e.g., "mmdvm-2025-11-05.log" -> look for "mmdvm-2025-11-04.log"
+                import re
+                base_pattern = re.sub(r'\d{4}-\d{2}-\d{2}', date_str, self.path.name)
+                log_file = self.path.parent / base_pattern
                 
                 if not log_file.exists():
                     logger.debug(f"Log file not found: {log_file}")
