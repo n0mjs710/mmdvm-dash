@@ -53,19 +53,6 @@ class Transmission:
         return asdict(self)
 
 
-@dataclass
-class Event:
-    """Represents a dashboard event"""
-    timestamp: float
-    event_type: str
-    source: str
-    message: str
-    data: Dict[str, Any] = field(default_factory=dict)
-    
-    def to_dict(self) -> Dict[str, Any]:
-        return asdict(self)
-
-
 class DashboardState:
     """Maintains dashboard state"""
     
@@ -100,15 +87,6 @@ class DashboardState:
         self.status.current_mode = mode
         self.status.last_update = datetime.now().timestamp()
         
-        event = Event(
-            timestamp=self.status.last_update,
-            event_type='mode_change',
-            source='mmdvmhost',
-            message=f'Mode changed from {old_mode} to {mode}',
-            data={'old_mode': old_mode, 'new_mode': mode}
-        )
-        self.add_event(event)
-        
         # Use DEBUG logging during initial scan, INFO for live events
         if self.suppress_broadcasts:
             logger.debug(f"Mode changed: {old_mode} -> {mode}")
@@ -142,15 +120,6 @@ class DashboardState:
             message = f'{network} {"connected" if connected else "disconnected"}'
         
         self.status.last_update = datetime.now().timestamp()
-        
-        event = Event(
-            timestamp=self.status.last_update,
-            event_type='network_status',
-            source='network',
-            message=message,
-            data={'network': network, 'connected': connected, 'target': target}
-        )
-        self.add_event(event)
         
         # Use DEBUG logging during initial scan, INFO for live events
         if self.suppress_broadcasts:
