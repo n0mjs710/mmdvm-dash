@@ -290,9 +290,7 @@ class DashboardState:
         message = {
             'type': 'state_update',  # Frontend expects 'state_update'
             'status': status_data,
-            'active_transmissions': self.get_active_transmissions(),
-            'recent_calls': self.get_recent_calls(10),
-            'events': self.get_events(20)
+            'active_transmissions': self.get_active_transmissions()
         }
         
         # Create a hash of the important state to detect changes
