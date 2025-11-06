@@ -126,10 +126,11 @@ class LogMonitor:
     
     def _get_state_targets(self) -> Dict[str, bool]:
         """Get the state information we need to find for this log type"""
-        # Common state for all logs
-        targets = {
-            'current_mode': False,  # Current operating mode
-        }
+        targets = {}
+        
+        # MMDVMHost-specific state
+        if 'mmdvm' in self.name.lower():
+            targets['current_mode'] = False  # Current operating mode
         
         # Gateway-specific state
         if 'DMRGateway' in self.name:
